@@ -9,7 +9,7 @@ pip install fastapi uvicorn
 uvicorn main:app --reload
 
 --Encriptador
-pip uninstall passlib bcrypt -y
+pip install "python-jose[cryptography]"
 pip install bcrypt
 
 

@@ -7,7 +7,6 @@ from database import load_db
 
 SECRET_KEY = "clave_secreta_super_segura"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # Usaremos HTTPBearer para que Swagger pida directamente el token Bearer
 security = HTTPBearer()
@@ -23,8 +22,8 @@ def hash_password(password: str) -> str:
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    # expire = datetime.utcnow() + timedelta(days=1)
+    # to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 # Obtener el usuario actual a través del token del Header
