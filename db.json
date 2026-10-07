@@ -1,0 +1,313 @@
+{
+    "users": [
+        {
+            "id": "USR-001",
+            "apellidos": "Morales Salazar",
+            "nombres": "Roberto Carlos",
+            "dni": "41235678",
+            "fechaNacimiento": "1988-11-05",
+            "correo": "admin@gmail.com",
+            "password": "admin123",
+            "celular": "998877665",
+            "carreraObjetivo": "Dirección Académica",
+            "rol": "admin",
+            "estado": "Activo"
+        },
+        {
+            "id": "USR-002",
+            "apellidos": "Herrera Villanueva",
+            "nombres": "Carmen Rosa",
+            "dni": "45678912",
+            "fechaNacimiento": "1990-03-12",
+            "correo": "c.herrera@academia.edu.pe",
+            "password": "docente123",
+            "celular": "976543210",
+            "carreraObjetivo": "Cátedra de Álgebra",
+            "rol": "docente",
+            "estado": "Activo",
+            "cursosAsignados": [
+                {
+                    "id": "CRS-001",
+                    "asignatura": "Álgebra y Funciones"
+                }
+            ]
+        },
+        {
+            "id": "USR-003",
+            "apellidos": "Paredes Ruiz",
+            "nombres": "Miguel Ángel",
+            "dni": "48923104",
+            "fechaNacimiento": "1985-09-18",
+            "correo": "m.paredes@academia.edu.pe",
+            "password": "docente123",
+            "celular": "965412389",
+            "carreraObjetivo": "Cátedra de Física",
+            "rol": "docente",
+            "estado": "Activo",
+            "cursosAsignados": [
+                {
+                    "id": "CRS-002",
+                    "asignatura": "Física Fundamental"
+                }
+            ]
+        },
+        {
+            "id": "USR-004",
+            "apellidos": "Torres Meléndez",
+            "nombres": "Elena Sofía",
+            "dni": "43219876",
+            "fechaNacimiento": "1992-07-25",
+            "correo": "e.torres@academia.edu.pe",
+            "password": "docente123",
+            "celular": "934567890",
+            "carreraObjetivo": "Cátedra de Biología",
+            "rol": "docente",
+            "estado": "Activo",
+            "cursosAsignados": [
+                {
+                    "id": "CRS-003",
+                    "asignatura": "Biología y Anatomía"
+                }
+            ]
+        },
+        {
+            "id": "USR-005",
+            "apellidos": "Flores Mendoza",
+            "nombres": "Juan Carlos",
+            "dni": "74839201",
+            "fechaNacimiento": "2005-04-15",
+            "correo": "estudiante@gmail.com",
+            "password": "estudiante123",
+            "celular": "987654321",
+            "universidad": "UNMSM",
+            "carreraObjetivo": "Medicina Humana",
+            "areaAcademica": "Ciencias Médicas",
+            "rol": "estudiante",
+            "estado": "Activo",
+            "cursosInscritos": [
+                {
+                    "id": "CRS-001",
+                    "asignatura": "Álgebra y Funciones"
+                },
+                {
+                    "id": "CRS-003",
+                    "asignatura": "Biología y Anatomía"
+                }
+            ]
+        },
+        {
+            "id": "USR-006",
+            "apellidos": "Quispe Alarcón",
+            "nombres": "Valeria Sofía",
+            "dni": "76543210",
+            "fechaNacimiento": "2006-08-22",
+            "correo": "v.quispe@academia.edu.pe",
+            "password": "estudiante123",
+            "celular": "912345678",
+            "universidad": "UNI",
+            "carreraObjetivo": "Ingeniería de Sistemas",
+            "areaAcademica": "Ciencias Exactas",
+            "rol": "estudiante",
+            "estado": "Activo",
+            "cursosInscritos": [
+                {
+                    "id": "CRS-001",
+                    "asignatura": "Álgebra y Funciones"
+                },
+                {
+                    "id": "CRS-002",
+                    "asignatura": "Física Fundamental"
+                }
+            ]
+        },
+        {
+            "id": "USR-007",
+            "apellidos": "Gómez Pérez",
+            "nombres": "Lucía Fernanda",
+            "dni": "73214569",
+            "fechaNacimiento": "2006-05-10",
+            "correo": "l.gomez@academia.edu.pe",
+            "password": "estudiante123",
+            "celular": "945612378",
+            "universidad": "PUCP",
+            "carreraObjetivo": "Derecho",
+            "areaAcademica": "Humanidades y Letras",
+            "rol": "estudiante",
+            "estado": "Activo",
+            "cursosInscritos": [
+                {
+                    "id": "CRS-002",
+                    "asignatura": "Física Fundamental"
+                },
+                {
+                    "id": "CRS-003",
+                    "asignatura": "Biología y Anatomía"
+                }
+            ]
+        }
+    ],
+    "roles": [
+        "Admin",
+        "Docente",
+        "Estudiante"
+    ],
+    "incidents": [
+        {
+            "id": "INC-D01",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": "45678912",
+            "correo": "c.herrera@academia.edu.pe",
+            "tipo": "Inasistencia Inesperada",
+            "fechaPresentacion": "Hoy 07:45 AM",
+            "materia": "Álgebra y Funciones (Zoom-01)",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Emergencia médica odontológica de urgencia por fuerte infección aguda.",
+            "archivoNombre": "constancia_medica_essalud.pdf",
+            "estado": "Pendiente"
+        }
+    ],
+    "courses": [
+        {
+            "id": "CRS-001",
+            "asignatura": "Álgebra y Funciones",
+            "area": "Ciencias Exactas",
+            "carrera": "Ingeniería de Sistemas",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dias": [
+                "Lunes",
+                "Miércoles"
+            ],
+            "horaInicio": "08:00 AM",
+            "horaFin": "10:00 AM",
+            "meetUrl": "https://meet.google.com/abc-defg-hij",
+            "repositorio": "drive.google.com/mat101",
+            "estado": "Activo"
+        },
+        {
+            "id": "CRS-002",
+            "asignatura": "Física Fundamental",
+            "area": "Ciencias Exactas",
+            "carrera": "Ingeniería de Sistemas",
+            "docenteId": "USR-003",
+            "docente": "Prof. Miguel Ángel Paredes",
+            "dias": [
+                "Martes",
+                "Jueves"
+            ],
+            "horaInicio": "08:00 AM",
+            "horaFin": "10:00 AM",
+            "meetUrl": "https://meet.google.com/klm-nopq-rst",
+            "repositorio": "campus.pre.pe/fisica",
+            "estado": "Activo"
+        },
+        {
+            "id": "CRS-003",
+            "asignatura": "Biología y Anatomía",
+            "area": "Ciencias Médicas",
+            "carrera": "Medicina Humana",
+            "docenteId": "USR-004",
+            "docente": "Dra. Elena Sofía Torres",
+            "dias": [
+                "Lunes",
+                "Viernes"
+            ],
+            "horaInicio": "03:00 PM",
+            "horaFin": "05:00 PM",
+            "meetUrl": "https://meet.google.com/uvw-xyza-bcd",
+            "repositorio": "campus.pre.pe/bio",
+            "estado": "Activo"
+        }
+    ],
+    "attendanceSessions": [
+        {
+            "id": "ATT-SES-001",
+            "cursoId": "CRS-001",
+            "asignatura": "Álgebra y Funciones",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "fecha": "2026-09-07",
+            "horaApertura": "07:55 AM",
+            "modalidad": "Virtual en vivo",
+            "asistentesPuntuales": [
+                {
+                    "estudianteId": "USR-005",
+                    "estudiante": "Juan Carlos Flores Mendoza",
+                    "horaRegistro": "07:58 AM"
+                },
+                {
+                    "estudianteId": "USR-006",
+                    "estudiante": "Valeria Sofía Quispe Alarcón",
+                    "horaRegistro": "07:59 AM"
+                }
+            ],
+            "tardanzas": [],
+            "ausentes": [
+                {
+                    "estudianteId": "USR-007",
+                    "estudiante": "Lucía Fernanda Gómez Pérez"
+                }
+            ]
+        },
+        {
+            "id": "ATT-SES-002",
+            "cursoId": "CRS-002",
+            "asignatura": "Física Fundamental",
+            "docenteId": "USR-003",
+            "docente": "Prof. Miguel Ángel Paredes",
+            "fecha": "2026-09-08",
+            "horaApertura": "07:55 AM",
+            "modalidad": "Virtual en vivo",
+            "asistentesPuntuales": [
+                {
+                    "estudianteId": "USR-007",
+                    "estudiante": "Lucía Fernanda Gómez Pérez",
+                    "horaRegistro": "08:01 AM"
+                }
+            ],
+            "tardanzas": [
+                {
+                    "estudianteId": "USR-006",
+                    "estudiante": "Valeria Sofía Quispe Alarcón",
+                    "horaRegistro": "08:05 AM"
+                }
+            ],
+            "ausentes": [
+                {
+                    "estudianteId": "USR-005",
+                    "estudiante": "Juan Carlos Flores Mendoza"
+                }
+            ]
+        },
+        {
+            "id": "ATT-SES-003",
+            "cursoId": "CRS-003",
+            "asignatura": "Biología y Anatomía",
+            "docenteId": "USR-004",
+            "docente": "Dra. Elena Sofía Torres",
+            "fecha": "2026-09-07",
+            "horaApertura": "02:50 PM",
+            "modalidad": "Virtual en vivo",
+            "asistentesPuntuales": [
+                {
+                    "estudianteId": "USR-005",
+                    "estudiante": "Juan Carlos Flores Mendoza",
+                    "horaRegistro": "02:55 PM"
+                }
+            ],
+            "tardanzas": [
+                {
+                    "estudianteId": "USR-007",
+                    "estudiante": "Lucía Fernanda Gómez Pérez",
+                    "horaRegistro": "03:02 PM"
+                }
+            ],
+            "ausentes": [
+                {
+                    "estudianteId": "USR-006",
+                    "estudiante": "Valeria Sofía Quispe Alarcón"
+                }
+            ]
+        }
+    ]
+}
