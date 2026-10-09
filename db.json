@@ -144,6 +144,25 @@
                     "asignatura": "Biología y Anatomía"
                 }
             ]
+        },
+        {
+            "id": "USR-008",
+            "apellidos": "Torres Sanchez",
+            "nombres": "Jesus Hector",
+            "dni": "43279876",
+            "fechaNacimiento": "1994-07-25",
+            "correo": "el.torres@academia.edu.pe",
+            "password": "docente1234",
+            "celular": "934567870",
+            "carreraObjetivo": "Python I",
+            "rol": "docente",
+            "estado": "Activo",
+            "cursosAsignados": [
+                {
+                    "id": "CRS-003",
+                    "asignatura": "Python I"
+                }
+            ]
         }
     ],
     "roles": [
@@ -178,8 +197,25 @@
                 "Lunes",
                 "Miércoles"
             ],
-            "horaInicio": "08:00 AM",
-            "horaFin": "10:00 AM",
+            "horaInicio": "08:00",
+            "horaFin": "10:00",
+            "meetUrl": "https://meet.google.com/abc-defg-hij",
+            "repositorio": "drive.google.com/mat101",
+            "estado": "Activo"
+        },
+        {
+            "id": "CRS-001",
+            "asignatura": "Python I",
+            "area": "Programación",
+            "carrera": "Ingeniería de Sistemas",
+            "docenteId": "USR-008",
+            "docente": "Torres Sanchez Jesus Hector",
+            "dias": [
+                "Lunes",
+                "Miércoles"
+            ],
+            "horaInicio": "10:00",
+            "horaFin": "12:00",
             "meetUrl": "https://meet.google.com/abc-defg-hij",
             "repositorio": "drive.google.com/mat101",
             "estado": "Activo"
@@ -195,8 +231,8 @@
                 "Martes",
                 "Jueves"
             ],
-            "horaInicio": "08:00 AM",
-            "horaFin": "10:00 AM",
+            "horaInicio": "08:00",
+            "horaFin": "10:00",
             "meetUrl": "https://meet.google.com/klm-nopq-rst",
             "repositorio": "campus.pre.pe/fisica",
             "estado": "Activo"
@@ -212,8 +248,8 @@
                 "Lunes",
                 "Viernes"
             ],
-            "horaInicio": "03:00 PM",
-            "horaFin": "05:00 PM",
+            "horaInicio": "15:00",
+            "horaFin": "17:00",
             "meetUrl": "https://meet.google.com/uvw-xyza-bcd",
             "repositorio": "campus.pre.pe/bio",
             "estado": "Activo"
@@ -227,18 +263,18 @@
             "docenteId": "USR-002",
             "docente": "Prof. Carmen Rosa Herrera",
             "fecha": "2026-09-07",
-            "horaApertura": "07:55 AM",
+            "horaApertura": "07:55",
             "modalidad": "Virtual en vivo",
             "asistentesPuntuales": [
                 {
                     "estudianteId": "USR-005",
                     "estudiante": "Juan Carlos Flores Mendoza",
-                    "horaRegistro": "07:58 AM"
+                    "horaRegistro": "07:58"
                 },
                 {
                     "estudianteId": "USR-006",
                     "estudiante": "Valeria Sofía Quispe Alarcón",
-                    "horaRegistro": "07:59 AM"
+                    "horaRegistro": "07:59"
                 }
             ],
             "tardanzas": [],
@@ -256,20 +292,20 @@
             "docenteId": "USR-003",
             "docente": "Prof. Miguel Ángel Paredes",
             "fecha": "2026-09-08",
-            "horaApertura": "07:55 AM",
+            "horaApertura": "07:55",
             "modalidad": "Virtual en vivo",
             "asistentesPuntuales": [
                 {
                     "estudianteId": "USR-007",
                     "estudiante": "Lucía Fernanda Gómez Pérez",
-                    "horaRegistro": "08:01 AM"
+                    "horaRegistro": "08:01"
                 }
             ],
             "tardanzas": [
                 {
                     "estudianteId": "USR-006",
                     "estudiante": "Valeria Sofía Quispe Alarcón",
-                    "horaRegistro": "08:05 AM"
+                    "horaRegistro": "08:05"
                 }
             ],
             "ausentes": [
@@ -308,6 +344,96 @@
                     "estudiante": "Valeria Sofía Quispe Alarcón"
                 }
             ]
+        },
+        {
+            "id": "SES-999",
+            "cursoId": "CRS-001",
+            "asignatura": "Álgebra y Funciones",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "fecha": "2026-09-30",
+            "horaApertura": "08:00",
+            "modalidad": "Virtual",
+            "asistentesPuntuales": [],
+            "tardanzas": [],
+            "ausentes": []
+        },
+        {
+            "id": "SES-TEST-01",
+            "cursoId": "CRS-001",
+            "asignatura": "Álgebra y Funciones",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "fecha": "2026-10-09",
+            "horaApertura": "08:00",
+            "modalidad": "Virtual",
+            "asistentesPuntuales": [
+                {
+                    "estudianteId": "EST-001",
+                    "estudiante": "Juan Pérez",
+                    "horaRegistro": "08:05"
+                }
+            ],
+            "tardanzas": [],
+            "ausentes": []
+        },
+        {
+            "id": "SES-TEST-02",
+            "cursoId": "CRS-001",
+            "asignatura": "Álgebra y Funciones",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "fecha": "2026-10-09",
+            "horaApertura": "08:00",
+            "modalidad": "Virtual",
+            "asistentesPuntuales": [],
+            "tardanzas": [
+                {
+                    "estudianteId": "EST-002",
+                    "estudiante": "María Gómez",
+                    "horaRegistro": "08:15"
+                }
+            ],
+            "ausentes": []
+        },
+        {
+            "id": "SES-888",
+            "cursoId": "CRS-001",
+            "asignatura": "Álgebra y Funciones",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "fecha": "2026-10-09",
+            "horaApertura": "08:00",
+            "modalidad": "Virtual",
+            "asistentesPuntuales": [],
+            "tardanzas": [],
+            "ausentes": []
+        },
+        {
+            "id": "SES-887",
+            "cursoId": "CRS-001",
+            "asignatura": "Python I",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "fecha": "2026-10-09",
+            "horaApertura": "08:00",
+            "modalidad": "Virtual",
+            "asistentesPuntuales": [],
+            "tardanzas": [],
+            "ausentes": []
+        },
+        {
+            "id": "SES-de32c5",
+            "cursoId": "CRS-001",
+            "asignatura": "Python I",
+            "docenteId": "USR-002",
+            "docente": "Prof. Carmen Rosa Herrera",
+            "fecha": "2026-10-09",
+            "horaApertura": "08:00",
+            "modalidad": "Virtual",
+            "asistentesPuntuales": [],
+            "tardanzas": [],
+            "ausentes": []
         }
     ]
 }
