@@ -150,3 +150,15 @@ def test_marcar_asistencia_sesion_no_existe():
     
     assert response.status_code == 404
     assert "Sesión de asistencia no encontrada" in response.json().get("detail", "")
+
+def test_listar_matriculas_como_admin():
+    """Valida que el admin pueda listar las matrículas."""
+    response = client.get("/matriculas", headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+def test_listar_pagos_como_estudiante():
+    """Valida que el estudiante pueda consultar los pagos."""
+    response = client.get("/matriculas/pagos", headers=ESTUDIANTE_HEADERS)
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
