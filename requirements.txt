@@ -5,5 +5,3 @@ python-jose[cryptography]
 bcrypt
 pytest
 httpx
-google-auth-oauthlib
-python-dotenv

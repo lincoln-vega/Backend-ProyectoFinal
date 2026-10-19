@@ -7,8 +7,6 @@ __pycache__/
 venv/
 env/
 .env
-google-oauth-tokens.json
-*.oauth.json
 # InsForge & AI agent skills
 .insforge
 .agent
