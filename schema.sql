@@ -105,3 +105,16 @@ CREATE TABLE IF NOT EXISTS pagos (
     estado TEXT DEFAULT 'Aprobado',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 7. TABLA: meet_attendance_audit (Auditoría del docente organizador)
+CREATE TABLE IF NOT EXISTS meet_attendance_audit (
+    id TEXT PRIMARY KEY,
+    "cursoId" TEXT NOT NULL REFERENCES courses(id),
+    "docenteId" TEXT NOT NULL REFERENCES users(id),
+    "meetingSpace" TEXT NOT NULL,
+    "participantSession" TEXT NOT NULL,
+    "eventType" TEXT NOT NULL,
+    "participantEmail" TEXT NOT NULL,
+    "receivedAt" TIMESTAMPTZ NOT NULL,
+    UNIQUE ("meetingSpace", "participantSession", "eventType")
+);

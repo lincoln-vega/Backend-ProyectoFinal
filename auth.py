@@ -5,6 +5,8 @@ from jose import JWTError, jwt
 import bcrypt
 from database import load_db
 
+security = HTTPBearer()
+
 SECRET_KEY = "clave_secreta_super_segura"
 ALGORITHM = "HS256"
 
