@@ -57,27 +57,18 @@ después de una autorización OAuth válida.
    almacenará los tokens en `GOOGLE_TOKEN_STORE` y actualizará `googleEmail`.
 
 El archivo OAuth y el almacén de tokens están excluidos por `.gitignore`. No
-deben subirse a GitHub ni enviarse al frontend. La creación de espacios Meet,
-Pub/Sub y la auditoría de `participantSessions` se implementarán después de
-validar esta vinculación.
+deben subirse a GitHub ni enviarse al frontend.
 
-Con la cuenta vinculada, el docente asignado a un curso puede crear su espacio
-de Meet mediante `POST /meet/cursos/{curso_id}/espacio`. La respuesta contiene
-`meetUrl`; el backend guarda también `meetSpaceName` y
-`googleOrganizerEmail` dentro del curso. Si se amplían los permisos OAuth, el
-docente debe desconectar y volver a conectar su cuenta para obtener un token
-con los permisos actualizados.
+### Registro manual de asistencia docente
 
-Para recibir entradas y salidas reales, configura en `.env` el Project ID de
-Google Cloud y un topic Pub/Sub:
+Para el flujo `feature/SCRM-15-asistencia-interfaz`, la interfaz registra la
+sesión explícitamente:
 
 ```text
-GOOGLE_CLOUD_PROJECT_ID=tu-project-id
-GOOGLE_PUBSUB_TOPIC=meet-attendance-events
+POST /meet/cursos/{curso_id}/entrada?docente_email=...
+POST /meet/cursos/{curso_id}/salida?docente_email=...
 ```
 
-El topic debe existir en Google Cloud y Pub/Sub debe poder entregar eventos a
-`POST /meet/events/pubsub` mediante HTTPS. Después de crear el espacio, el
-docente ejecuta `POST /meet/cursos/{curso_id}/suscripcion`. La auditoría se
-consulta con `GET /meet/cursos/{curso_id}/auditoria`. En desarrollo local, el
-endpoint de Pub/Sub requiere un túnel HTTPS público.
+La entrada devuelve `meet_url` y crea una sesión `EN_PROGRESO`. La salida
+finaliza esa misma sesión y calcula `minutos_efectivos`. El docente debe ser el
+usuario autenticado y estar asignado al curso.
