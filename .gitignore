@@ -5,8 +5,10 @@ __pycache__/
 
 # Entorno virtual 
 venv/
+.venv/
 env/
 .env
+.pytest_cache/
 # InsForge & AI agent skills
 .insforge
 .agent

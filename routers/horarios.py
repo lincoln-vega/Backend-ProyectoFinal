@@ -46,7 +46,7 @@ def crear_curso(course: CourseCreate):
     if any(c["id"] == course.id for c in courses):
         raise HTTPException(status_code=400, detail="El ID del curso ya existe")
         
-    courses.append(course.model_dump())
+    courses.append(course.model_dump() if hasattr(course, "model_dump") else course.dict())
     db["courses"] = courses
     save_db(db)
     
@@ -72,7 +72,7 @@ def editar_curso(curso_id: str, course: CourseCreate):
     if curso_index is None:
         raise HTTPException(status_code=404, detail="Curso no encontrado")
 
-    courses[curso_index] = course.model_dump()
+    courses[curso_index] = course.model_dump() if hasattr(course, "model_dump") else course.dict()
     db["courses"] = courses
     save_db(db)
 
