@@ -268,36 +268,3 @@ def test_cruce_nomina_algoritmo():
     assert "horasEfectivas" in primer_docente
     assert "montoNeto" in primer_docente
     assert "estadoAuditoria" in primer_docente
-
-# --- PRUEBAS MEET: AUDITORÍA DE ENTRADA / SALIDA Y TIEMPO ACTIVO ---
-
-def test_meet_asistencia_docente_ciclo_completo():
-    """Valida el registro de entrada, salida y cálculo de permanencia en Meet."""
-    from auth import create_access_token
-    docente_email = "e.torres@academia.edu.pe"
-    curso_id = "CRS-003"
-    token_torres = create_access_token({"sub": docente_email, "rol": "docente"})
-    headers_docente = {"Authorization": f"Bearer {token_torres}"}
-
-    # Registrar entrada
-    res_in = client.post(
-        f"/meet/cursos/{curso_id}/entrada?docente_email={docente_email}",
-        headers=headers_docente
-    )
-    assert res_in.status_code == 200
-    assert "meet_url" in res_in.json()
-    assert res_in.json()["estado_sesion"] == "EN_PROGRESO"
-
-    # Registrar salida
-    res_out = client.post(
-        f"/meet/cursos/{curso_id}/salida?docente_email={docente_email}",
-        headers=headers_docente
-    )
-    assert res_out.status_code == 200
-    assert res_out.json()["estado_sesion"] == "FINALIZADO"
-    assert "minutos_efectivos" in res_out.json()
-
-    # Consultar auditoría
-    res_audit = client.get(f"/meet/cursos/{curso_id}/auditoria", headers=headers_docente)
-    assert res_audit.status_code == 200
-    assert len(res_audit.json()) > 0

@@ -22,16 +22,46 @@ pip install pytest httpx
 pytest -v
 ```
 
-### Registro manual de asistencia docente
+### Asistencia docente Meet en InsForge
 
-Para el flujo `feature/SCRM-15-asistencia-interfaz`, la interfaz registra la
-sesión explícitamente:
+El registro manual de asistencia docente también está desplegado en el proyecto
+InsForge `Portal-backend`. No usa Google Meet API ni detecta participantes
+automáticamente: el docente registra la entrada, abre el enlace del curso y
+registra la salida al finalizar.
+
+Funciones activas:
 
 ```text
-POST /meet/cursos/{curso_id}/entrada?docente_email=...
-POST /meet/cursos/{curso_id}/salida?docente_email=...
+meet-entrada
+meet-salida
+meet-auditoria
 ```
 
-La entrada devuelve `meet_url` y crea una sesión `EN_PROGRESO`. La salida
-finaliza esa misma sesión y calcula `minutos_efectivos`. El docente debe ser el
-usuario autenticado y estar asignado al curso.
+Las funciones reciben el token de InsForge en `Authorization: Bearer <token>`.
+El cuerpo debe incluir el identificador del curso:
+
+```json
+{
+  "curso_id": "CRS-003"
+}
+```
+
+Ejemplo desde el frontend con `@insforge/sdk`:
+
+```typescript
+await insforge.functions.invoke("meet-entrada", {
+  body: { curso_id: "CRS-003" }
+});
+
+await insforge.functions.invoke("meet-salida", {
+  body: { curso_id: "CRS-003" }
+});
+
+const { data: historial } = await insforge.functions.invoke("meet-auditoria", {
+  body: { curso_id: "CRS-003" }
+});
+```
+
+La tabla remota es `meet_attendance`. Las funciones validan que el usuario
+autenticado sea un docente activo, que sea el docente asignado al curso y que
+no tenga otra sesión activa para el mismo curso.
