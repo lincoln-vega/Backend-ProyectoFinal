@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     apellidos TEXT NOT NULL,
     nombres TEXT NOT NULL,
+    "tipoDocumento" TEXT DEFAULT 'DNI', -- 'DNI', 'CE', 'Pasaporte'
     dni TEXT,
     "fechaNacimiento" TEXT,
     correo TEXT UNIQUE NOT NULL,
@@ -22,7 +23,19 @@ CREATE TABLE IF NOT EXISTS users (
     "cursosInscritos" JSONB DEFAULT '[]'::jsonb,
     ciclovirtual TEXT DEFAULT 'Semestral',
     salario NUMERIC DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_users_dni CHECK (
+        dni IS NULL OR (
+            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
+        )
+    ),
+    CONSTRAINT check_users_celular CHECK (
+        celular IS NULL OR 
+        celular ~ '^9[0-9]{8}$' OR 
+        celular ~ '^\+[0-9]{8,15}$'
+    )
 );
 
 -- 2. TABLA: courses (Cursos y programación horaria institucional sin cruces)
@@ -78,12 +91,20 @@ CREATE TABLE IF NOT EXISTS incidents (
     docentereemplazo TEXT,
     horarioactualizado TEXT,
     observaciones TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_incidents_dni CHECK (
+        dni IS NULL OR (
+            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
+        )
+    )
 );
 
 -- 5. TABLA: matriculas (Registro oficial de matrículas y saldos de estudiantes)
 CREATE TABLE IF NOT EXISTS matriculas (
     id TEXT PRIMARY KEY, -- e.g. "MAT-2026-001"
+    "tipoDocumento" TEXT DEFAULT 'DNI',
     estudiante TEXT NOT NULL,
     dni TEXT,
     correo TEXT,
@@ -97,7 +118,19 @@ CREATE TABLE IF NOT EXISTS matriculas (
     "montoPagado" NUMERIC DEFAULT 0,
     "saldoPendiente" NUMERIC DEFAULT 0,
     estado TEXT DEFAULT 'Al día', -- 'Al día', 'Pagado Total', 'Cuota Vencida', 'Pendiente'
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_matriculas_dni CHECK (
+        dni IS NULL OR (
+            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
+        )
+    ),
+    CONSTRAINT check_matriculas_celular CHECK (
+        celular IS NULL OR 
+        celular ~ '^9[0-9]{8}$' OR 
+        celular ~ '^\+[0-9]{8,15}$'
+    )
 );
 
 -- 6. TABLA: pagos (Comprobantes y recibos de pago sincronizados)

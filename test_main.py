@@ -268,3 +268,95 @@ def test_cruce_nomina_algoritmo():
     assert "horasEfectivas" in primer_docente
     assert "montoNeto" in primer_docente
     assert "estadoAuditoria" in primer_docente
+
+# --- PRUEBAS CAPA 2: VALIDACIÓN RIGUROSA DE DNI Y NÚMERO TELEFÓNICO (PERÚ) ---
+
+def test_endpoint_validar_datos_exitoso():
+    """Valida que el endpoint responda 200 cuando el DNI (8 dígitos) y el celular (9 dígitos y empieza en 9) son correctos."""
+    payload = {
+        "dni": "74839201",
+        "celular": "987654321",
+        "correo": "alumno.valido@academia.edu.pe"
+    }
+    response = client.post("/usuarios/validar", json=payload)
+    assert response.status_code == 200
+    assert response.json()["valido"] is True
+
+def test_endpoint_validar_datos_dni_con_letras_rechazado():
+    """Valida que el backend rechace con 422 si el DNI contiene letras."""
+    payload = {
+        "dni": "7483920A",
+        "celular": "987654321"
+    }
+    response = client.post("/usuarios/validar", json=payload)
+    assert response.status_code == 422
+    assert "dni" in response.json()["detail"]["errores"]
+
+def test_endpoint_validar_datos_dni_longitud_incorrecta():
+    """Valida que el backend rechace con 422 si el DNI no tiene exactamente 8 dígitos."""
+    payload = {
+        "dni": "1234567",  # 7 dígitos
+        "celular": "987654321"
+    }
+    response = client.post("/usuarios/validar", json=payload)
+    assert response.status_code == 422
+    assert "dni" in response.json()["detail"]["errores"]
+
+def test_endpoint_validar_datos_celular_invalido():
+    """Valida que el backend rechace con 422 si el celular no tiene 9 dígitos o no empieza con 9."""
+    payload = {
+        "dni": "74839201",
+        "celular": "355353535353"  # 12 dígitos, no empieza en 9
+    }
+    response = client.post("/usuarios/validar", json=payload)
+    assert response.status_code == 422
+    assert "celular" in response.json()["detail"]["errores"]
+
+def test_crear_usuario_rechazo_dni_invalido_pydantic():
+    """Valida que al crear usuario el modelo Pydantic rechace DNI con letras o longitud errónea."""
+    nuevo_usuario_invalido = {
+        "nombres": "Usuario",
+        "apellidos": "Prueba",
+        "correo": "usuario.invalido@academia.edu.pe",
+        "password": "Password123!",
+        "rol": "estudiante",
+        "dni": "8765432X",  # Letra
+        "celular": "987111222"
+    }
+    response = client.post("/usuarios/", json=nuevo_usuario_invalido)
+    assert response.status_code == 422
+
+def test_endpoint_validar_datos_carnet_extranjeria_exitoso():
+    """Valida que un Carnet de Extranjería (CE) válido de 9 a 12 caracteres alfanuméricos sea aceptado."""
+    payload = {
+        "tipoDocumento": "CE",
+        "dni": "CE123456789",
+        "celular": "+573001234567"  # Celular internacional con código +57
+    }
+    response = client.post("/usuarios/validar", json=payload)
+    assert response.status_code == 200
+    assert response.json()["valido"] is True
+
+def test_endpoint_validar_datos_pasaporte_exitoso():
+    """Valida que un Pasaporte válido de 6 a 12 caracteres sea aceptado."""
+    payload = {
+        "tipoDocumento": "Pasaporte",
+        "dni": "PAS987654",
+        "celular": "+34612345678"  # Celular internacional España
+    }
+    response = client.post("/usuarios/validar", json=payload)
+    assert response.status_code == 200
+    assert response.json()["valido"] is True
+
+def test_endpoint_validar_datos_carnet_extranjeria_invalido():
+    """Valida que un Carnet de Extranjería menor a 9 caracteres sea rechazado con 422."""
+    payload = {
+        "tipoDocumento": "CE",
+        "dni": "CE1234",  # Muy corto
+        "celular": "+51987654321"
+    }
+    response = client.post("/usuarios/validar", json=payload)
+    assert response.status_code == 422
+    assert "dni" in response.json()["detail"]["errores"]
+
+
