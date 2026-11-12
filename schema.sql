@@ -300,3 +300,46 @@ INSERT INTO configuracion (
   '+51 987 654 321', 'contacto@academia.edu.pe', 'Semestral 2026-I', '2026-01-15', '2026-07-31',
   'En Curso', 50.00, 15, 2.00
 ) ON CONFLICT (id) DO NOTHING;
+
+-- H. TAREAS ACADÉMICAS (V2)
+CREATE TABLE IF NOT EXISTS tareas (
+  id TEXT PRIMARY KEY,
+  curso_id TEXT NOT NULL,
+  curso TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'Tarea Calificada',
+  titulo TEXT NOT NULL,
+  descripcion TEXT,
+  fecha_limite TEXT NOT NULL,
+  puntos TEXT DEFAULT '20 pts',
+  docente_id TEXT,
+  docente TEXT NOT NULL,
+  estado TEXT DEFAULT 'Por entregar',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO tareas (id, curso_id, curso, tipo, titulo, descripcion, fecha_limite, puntos, docente_id, docente, estado)
+VALUES
+('TSK-001', 'CRS-001', 'Álgebra y Funciones', 'Tarea Calificada', 'Práctica N° 4: Funciones Cuadráticas y Polinomios', 'Desarrollar los 10 ejercicios pares de la separata teórica N° 4 en formato PDF manuscrito o digital.', 'Mañana, 11:59 PM', '20 pts', 'USR-002', 'Prof. Carmen Rosa Herrera', 'Por entregar'),
+('TSK-002', 'CRS-002', 'Física Fundamental', 'Guía de Ejercicios', 'Taller N° 3: Cinemática y Leyes de Newton', 'Completar la resolución de los problemas de dinámica lineal con sus diagramas de cuerpo libre.', 'Viernes, 11:59 PM', '20 pts', 'USR-003', 'Prof. Miguel Ángel Paredes', 'Por entregar'),
+('TSK-003', 'CRS-003', 'Biología y Anatomía', 'Cuestionario Virtual', 'Autoevaluación: Genética y Sistema Nervioso', 'Cuestionario de 20 preguntas con retroalimentación inmediata sobre bases celulares y herencia genética.', 'Entregado ayer', '20 pts', 'USR-004', 'Dra. Elena Sofía Torres', 'Entregado'),
+('TSK-004', 'SIM-01', 'Academia Pre (General)', 'Simulacro Tipo Admisión', 'Simulacro General de Ciencias y Humanidades', 'Evaluación cronometrada de 3 horas simulando el examen de admisión oficial con ranking en vivo.', 'Domingo, 02:00 PM', '100 preguntas', 'USR-001', 'Coordinación Académica', 'Por entregar')
+ON CONFLICT (id) DO NOTHING;
+
+-- I. ANUNCIOS Y COMUNICADOS ACADÉMICOS (V2)
+CREATE TABLE IF NOT EXISTS anuncios (
+  id TEXT PRIMARY KEY,
+  curso_id TEXT NOT NULL,
+  curso TEXT NOT NULL,
+  titulo TEXT NOT NULL,
+  contenido TEXT NOT NULL,
+  prioridad TEXT DEFAULT 'Normal',
+  docente_id TEXT,
+  docente TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO anuncios (id, curso_id, curso, titulo, contenido, prioridad, docente_id, docente)
+VALUES
+('ANN-001', 'CRS-001', 'Álgebra y Funciones', 'Material adicional: Fórmulas de Factorización y Radicación', 'Estimados alumnos, he subido a la biblioteca digital el formulario resumido para resolver con mayor rapidez los problemas del simulacro de este fin de semana. ¡Aprovéchenlo!', 'Importante', 'USR-002', 'Prof. Carmen Rosa Herrera'),
+('ANN-002', 'CRS-002', 'Física Fundamental', 'Repaso extraordinario de Estática y Rozamiento', 'Este jueves a las 06:00 PM tendremos una sesión voluntaria de resolución de dudas en Google Meet antes de la práctica calificada.', 'Normal', 'USR-003', 'Prof. Miguel Ángel Paredes')
+ON CONFLICT (id) DO NOTHING;

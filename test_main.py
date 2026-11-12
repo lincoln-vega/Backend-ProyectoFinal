@@ -360,3 +360,68 @@ def test_endpoint_validar_datos_carnet_extranjeria_invalido():
     assert "dni" in response.json()["detail"]["errores"]
 
 
+# --- PRUEBAS DE TAREAS Y ANUNCIOS ACADÉMICOS (V2) ---
+
+def test_listar_tareas():
+    """Valida la obtención de tareas académicas."""
+    response = client.get("/tareas/")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+def test_crear_y_eliminar_tarea():
+    """Valida el ciclo de vida de una tarea: creación, actualización y eliminación."""
+    payload = {
+        "cursoId": "CRS-001",
+        "curso": "Álgebra y Funciones",
+        "tipo": "Tarea Calificada",
+        "titulo": "Tarea de Prueba Pytest",
+        "descripcion": "Resolver ejercicios 1 al 5",
+        "fechaLimite": "Viernes, 08:00 PM",
+        "puntos": "20 pts",
+        "docente": "Prof. Carmen Rosa Herrera",
+        "estado": "Por entregar"
+    }
+    # Crear
+    post_res = client.post("/tareas/", json=payload)
+    assert post_res.status_code == 201
+    tarea_creada = post_res.json()
+    tarea_id = tarea_creada["id"]
+    assert tarea_creada["titulo"] == "Tarea de Prueba Pytest"
+
+    # Actualizar estado
+    patch_res = client.patch(f"/tareas/{tarea_id}", json={"estado": "Entregado"})
+    assert patch_res.status_code == 200
+    assert patch_res.json()["estado"] == "Entregado"
+
+    # Eliminar
+    del_res = client.delete(f"/tareas/{tarea_id}")
+    assert del_res.status_code == 200
+
+def test_listar_anuncios():
+    """Valida la obtención de comunicados y anuncios."""
+    response = client.get("/anuncios/")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+def test_crear_y_eliminar_anuncio():
+    """Valida la creación y eliminación de un anuncio."""
+    payload = {
+        "cursoId": "CRS-002",
+        "curso": "Física Fundamental",
+        "titulo": "Anuncio de Prueba Pytest",
+        "contenido": "Recordatorio de práctica para mañana.",
+        "prioridad": "Importante",
+        "docente": "Prof. Miguel Ángel Paredes"
+    }
+    # Crear
+    post_res = client.post("/anuncios/", json=payload)
+    assert post_res.status_code == 201
+    anuncio_creado = post_res.json()
+    anuncio_id = anuncio_creado["id"]
+    assert anuncio_creado["titulo"] == "Anuncio de Prueba Pytest"
+
+    # Eliminar
+    del_res = client.delete(f"/anuncios/{anuncio_id}")
+    assert del_res.status_code == 200
+
+
