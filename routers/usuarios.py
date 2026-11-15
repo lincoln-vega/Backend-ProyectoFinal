@@ -2,9 +2,8 @@ import re
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator, model_validator
-from database import load_db, save_db, get_pg_connection
+from database import load_db, save_db, get_pg_connection, fetch_all_as_dict, fetch_one_as_dict
 from auth import verify_password, hash_password, create_access_token, require_role
-from psycopg2.extras import RealDictCursor
 
 # Router para gestión de usuarios
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
@@ -147,9 +146,9 @@ def login(form_data: UserLogin):
     user = None
     if conn:
         try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            with conn.cursor() as cur:
                 cur.execute("SELECT * FROM users WHERE correo = %s LIMIT 1;", (form_data.correo.strip().lower(),))
-                user = cur.fetchone()
+                user = fetch_one_as_dict(cur)
         except Exception as e:
             print(f"[Login] Error buscando en Postgres: {e}")
         finally:
@@ -185,7 +184,7 @@ def listar_usuarios():
     conn = get_pg_connection()
     if conn:
         try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            with conn.cursor() as cur:
                 cur.execute("""
                     SELECT id, nombres, apellidos, "tipoDocumento", dni, "fechaNacimiento", correo, celular,
                            universidad, "carreraObjetivo", "areaAcademica", rol, estado,
@@ -193,7 +192,7 @@ def listar_usuarios():
                     FROM users
                     ORDER BY created_at DESC;
                 """)
-                return cur.fetchall()
+                return fetch_all_as_dict(cur)
         except Exception as e:
             print(f"[Listar Usuarios] Error en Postgres: {e}")
         finally:
@@ -215,11 +214,11 @@ def crear_usuario(user_data: UserCreate):
     conn = get_pg_connection()
     if conn:
         try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            with conn.cursor() as cur:
                 # 1. Validar unicidad de correo y DNI
                 cur.execute("SELECT id FROM users WHERE correo = %s OR dni = %s LIMIT 1;", 
                             (user_dict["correo"], user_dict["dni"]))
-                existing = cur.fetchone()
+                existing = fetch_one_as_dict(cur)
                 if existing:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
@@ -228,7 +227,8 @@ def crear_usuario(user_data: UserCreate):
 
                 # Generar ID
                 cur.execute("SELECT COUNT(*) FROM users;")
-                count = cur.fetchone()["count"]
+                count_row = fetch_one_as_dict(cur)
+                count = count_row["count"] if count_row else 0
                 user_id = f"USR-{count + 101:03d}"
                 user_dict["id"] = user_id
 
@@ -305,10 +305,10 @@ def actualizar_usuario(identificador: str, user_data: UserUpdate):
     conn = get_pg_connection()
     if conn:
         try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            with conn.cursor() as cur:
                 cur.execute("SELECT id FROM users WHERE id = %s OR correo = %s LIMIT 1;", 
                             (identificador, identificador))
-                user = cur.fetchone()
+                user = fetch_one_as_dict(cur)
                 if not user:
                     raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
