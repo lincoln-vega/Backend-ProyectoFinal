@@ -1054,5 +1054,254 @@
             "ausentes": []
         }
     ],
-    "meet_auditoria": []
+    "meet_auditoria": [],
+    "areas_academicas": [
+        {
+            "id": "AREA-EXA",
+            "codigo": "CIENCIAS-EXACTAS",
+            "nombre": "Ciencias Exactas e Ingenierías",
+            "descripcion": "Matemáticas, Física, Química, Computación e ingenierías afines",
+            "color": "#2563EB",
+            "estado": "Activo"
+        },
+        {
+            "id": "AREA-MED",
+            "codigo": "CIENCIAS-MEDICAS",
+            "nombre": "Ciencias Médicas y de la Salud",
+            "descripcion": "Medicina Humana, Enfermería, Odontología, Biología y afines",
+            "color": "#DC2626",
+            "estado": "Activo"
+        },
+        {
+            "id": "AREA-HUM",
+            "codigo": "HUMANIDADES",
+            "nombre": "Humanidades y Ciencias Sociales",
+            "descripcion": "Derecho, Literatura, Historia, Filosofía y afines",
+            "color": "#7C3AED",
+            "estado": "Activo"
+        },
+        {
+            "id": "AREA-GES",
+            "codigo": "GESTION",
+            "nombre": "Gestión Institucional y Empresarial",
+            "descripcion": "Administración, Economía, Contabilidad y Dirección",
+            "color": "#059669",
+            "estado": "Activo"
+        }
+    ],
+    "carreras": [
+        {
+            "id": "CAR-001",
+            "codigo": "MED-HUM",
+            "nombre": "Medicina Humana",
+            "area_id": "AREA-MED",
+            "descripcion": "Programa de formación médica y ciencias de la salud con alto puntaje de admisión.",
+            "duracion_anios": 7,
+            "grado_academico": "Médico Cirujano",
+            "universidades_objetivo": ["UNMSM", "UPCH", "UNFV"],
+            "estado": "Activo"
+        },
+        {
+            "id": "CAR-002",
+            "codigo": "ING-SIS",
+            "nombre": "Ingeniería de Sistemas",
+            "area_id": "AREA-EXA",
+            "descripcion": "Ingeniería orientada al desarrollo de software, cloud computing y ciencias computacionales.",
+            "duracion_anios": 5,
+            "grado_academico": "Ingeniero de Sistemas",
+            "universidades_objetivo": ["UNI", "UNMSM", "PUCP"],
+            "estado": "Activo"
+        },
+        {
+            "id": "CAR-003",
+            "codigo": "DER-POL",
+            "nombre": "Derecho y Ciencias Políticas",
+            "area_id": "AREA-HUM",
+            "descripcion": "Ciencias jurídicas, legislación pública y litigio civil y penal.",
+            "duracion_anios": 6,
+            "grado_academico": "Abogado",
+            "universidades_objetivo": ["PUCP", "UNMSM", "UNIFE"],
+            "estado": "Activo"
+        },
+        {
+            "id": "CAR-004",
+            "codigo": "ING-IND",
+            "nombre": "Ingeniería Industrial",
+            "area_id": "AREA-EXA",
+            "descripcion": "Optimización de procesos productivos, cadena de suministro y dirección de operaciones.",
+            "duracion_anios": 5,
+            "grado_academico": "Ingeniero Industrial",
+            "universidades_objetivo": ["UNI", "UNMSM", "ULIMA"],
+            "estado": "Activo"
+        }
+    ],
+    "tipos_ciclo": [
+        {
+            "id": "TCIC-SEM",
+            "codigo": "SEMESTRAL",
+            "nombre": "Semestral",
+            "duracion_semanas": 24,
+            "modalidad": "Virtual",
+            "descripcion": "Preparación semestral intensiva con desarrollo temático completo.",
+            "estado": "Activo"
+        },
+        {
+            "id": "TCIC-ANU",
+            "codigo": "ANUAL",
+            "nombre": "Anual",
+            "duracion_semanas": 44,
+            "modalidad": "Virtual",
+            "descripcion": "Preparación anual integral desde nivel cero hasta avanzado.",
+            "estado": "Activo"
+        },
+        {
+            "id": "TCIC-INT",
+            "codigo": "INTENSIVO",
+            "nombre": "Intensivo",
+            "duracion_semanas": 8,
+            "modalidad": "Virtual",
+            "descripcion": "Ciclo rápido y condensado de verano o repaso preuniversitario.",
+            "estado": "Activo"
+        },
+        {
+            "id": "TCIC-REP",
+            "codigo": "REPASO",
+            "nombre": "Repaso / Super Intensivo",
+            "duracion_semanas": 6,
+            "modalidad": "Virtual",
+            "descripcion": "Resolución masiva de exámenes tipo admisión y simulacros.",
+            "estado": "Activo"
+        },
+        {
+            "id": "TCIC-ESC",
+            "codigo": "ESCOLAR",
+            "nombre": "Reforzamiento Escolar",
+            "duracion_semanas": 12,
+            "modalidad": "Virtual",
+            "descripcion": "Nivelación y fortalecimiento para estudiantes de 4to y 5to de secundaria.",
+            "estado": "Activo"
+        }
+    ],
+    "ciclos_academicos": [
+        {
+            "id": "CIC-2026-SEM-1",
+            "codigo": "2026-SEM-I",
+            "nombre": "Semestral 2026-I",
+            "tipo_ciclo_id": "TCIC-SEM",
+            "anio": 2026,
+            "periodo": "I",
+            "fecha_inicio": "2026-01-15",
+            "fecha_fin": "2026-07-31",
+            "costo_matricula": 100.0,
+            "costo_pension_mensual": 300.0,
+            "costo_total_contado": 1800.0,
+            "es_vigente": true,
+            "estado": "En Curso"
+        },
+        {
+            "id": "CIC-2026-ANU",
+            "codigo": "2026-ANU",
+            "nombre": "Anual 2026",
+            "tipo_ciclo_id": "TCIC-ANU",
+            "anio": 2026,
+            "periodo": "Anual",
+            "fecha_inicio": "2026-03-01",
+            "fecha_fin": "2026-12-20",
+            "costo_matricula": 120.0,
+            "costo_pension_mensual": 280.0,
+            "costo_total_contado": 2500.0,
+            "es_vigente": false,
+            "estado": "En Curso"
+        },
+        {
+            "id": "CIC-2026-INT-1",
+            "codigo": "2026-INT-I",
+            "nombre": "Intensivo 2026-I",
+            "tipo_ciclo_id": "TCIC-INT",
+            "anio": 2026,
+            "periodo": "Verano",
+            "fecha_inicio": "2026-01-05",
+            "fecha_fin": "2026-02-28",
+            "costo_matricula": 80.0,
+            "costo_pension_mensual": 400.0,
+            "costo_total_contado": 850.0,
+            "es_vigente": false,
+            "estado": "Finalizado"
+        },
+        {
+            "id": "CIC-2026-SEM-2",
+            "codigo": "2026-SEM-II",
+            "nombre": "Semestral 2026-II",
+            "tipo_ciclo_id": "TCIC-SEM",
+            "anio": 2026,
+            "periodo": "II",
+            "fecha_inicio": "2026-08-15",
+            "fecha_fin": "2026-12-31",
+            "costo_matricula": 100.0,
+            "costo_pension_mensual": 300.0,
+            "costo_total_contado": 1800.0,
+            "es_vigente": false,
+            "estado": "Planificado"
+        }
+    ],
+    "turnos": [
+        {
+            "id": "TUR-MAN",
+            "codigo": "MANANA",
+            "nombre": "Mañana",
+            "hora_inicio": "08:00",
+            "hora_fin": "13:00",
+            "estado": "Activo"
+        },
+        {
+            "id": "TUR-TAR",
+            "codigo": "TARDE",
+            "nombre": "Tarde",
+            "hora_inicio": "14:00",
+            "hora_fin": "19:00",
+            "estado": "Activo"
+        },
+        {
+            "id": "TUR-NOC",
+            "codigo": "NOCHE",
+            "nombre": "Noche",
+            "hora_inicio": "18:00",
+            "hora_fin": "22:00",
+            "estado": "Activo"
+        }
+    ],
+    "ciclo_carreras": [
+        {
+            "id": "OFE-2026-SEM1-MED",
+            "ciclo_id": "CIC-2026-SEM-1",
+            "carrera_id": "CAR-001",
+            "vacantes_totales": 50,
+            "vacantes_ocupadas": 42,
+            "estado": "Disponible"
+        },
+        {
+            "id": "OFE-2026-SEM1-SIS",
+            "ciclo_id": "CIC-2026-SEM-1",
+            "carrera_id": "CAR-002",
+            "vacantes_totales": 45,
+            "vacantes_ocupadas": 38,
+            "estado": "Disponible"
+        },
+        {
+            "id": "OFE-2026-SEM1-DER",
+            "ciclo_id": "CIC-2026-SEM-1",
+            "carrera_id": "CAR-003",
+            "vacantes_totales": 40,
+            "vacantes_ocupadas": 29,
+            "estado": "Disponible"
+        },
+        {
+            "id": "OFE-2026-SEM1-IND",
+            "ciclo_id": "CIC-2026-SEM-1",
+            "carrera_id": "CAR-004",
+            "vacantes_totales": 35,
+            "vacantes_ocupadas": 20,
+            "estado": "Disponible"
+        }
+    ]
 }

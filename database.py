@@ -1,8 +1,10 @@
 import json
 import os
 from dotenv import load_dotenv
-import psycopg2
-from psycopg2.extras import RealDictCursor
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 # Cargar variables de entorno desde .env si existe
 env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -35,3 +37,20 @@ def load_db():
 def save_db(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
+
+def fetch_all_as_dict(cursor):
+    """Convierte resultados de una consulta SQL a lista de diccionarios (reemplaza RealDictCursor de forma nativa)."""
+    if not cursor or not cursor.description:
+        return []
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+def fetch_one_as_dict(cursor):
+    """Convierte una fila de una consulta SQL a un diccionario (reemplaza RealDictCursor de forma nativa)."""
+    if not cursor or not cursor.description:
+        return None
+    row = cursor.fetchone()
+    if not row:
+        return None
+    columns = [col[0] for col in cursor.description]
+    return dict(zip(columns, row))
