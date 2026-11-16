@@ -359,4 +359,79 @@ def test_endpoint_validar_datos_carnet_extranjeria_invalido():
     assert response.status_code == 422
     assert "dni" in response.json()["detail"]["errores"]
 
+# ==============================================================================
+# PRUEBAS AUTOMATIZADAS: MÓDULO ACADÉMICO (CARRERAS, CICLOS Y OFERTA)
+# ==============================================================================
+
+def test_academicos_listar_areas():
+    """Valida que se listen las áreas académicas registradas."""
+    response = client.get("/academicos/areas")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    assert any(a["codigo"] == "CIENCIAS-EXACTAS" for a in data)
+
+def test_academicos_listar_carreras():
+    """Valida que se listen las carreras profesionales."""
+    response = client.get("/academicos/carreras")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    assert any(c["codigo"] == "MED-HUM" for c in data)
+
+def test_academicos_listar_carreras_filtrado():
+    """Valida el filtrado de carreras por área académica."""
+    response = client.get("/academicos/carreras?area_id=AREA-MED")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert all(c["area_id"] == "AREA-MED" for c in data)
+
+def test_academicos_listar_tipos_ciclo():
+    """Valida el catálogo de tipos de ciclo o modalidades."""
+    response = client.get("/academicos/tipos-ciclo")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert any(t["codigo"] == "SEMESTRAL" for t in data)
+
+def test_academicos_listar_ciclos():
+    """Valida la lista de convocatorias o ciclos académicos."""
+    response = client.get("/academicos/ciclos")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert any(c["codigo"] == "2026-SEM-I" for c in data)
+
+def test_academicos_listar_turnos():
+    """Valida la consulta de los turnos institucionales."""
+    response = client.get("/academicos/turnos")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    assert any(t["codigo"] == "MANANA" for t in data)
+
+def test_academicos_listar_oferta():
+    """Valida la oferta de vacantes por ciclo y carrera."""
+    response = client.get("/academicos/oferta")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+
+def test_academicos_crear_area_prohibido_estudiante():
+    """Valida que un estudiante no tenga permisos de registrar áreas académicas (RBAC)."""
+    nueva_area = {
+        "id": "AREA-TEST",
+        "codigo": "TEST",
+        "nombre": "Área de Prueba",
+        "estado": "Activo"
+    }
+    response = client.post("/academicos/areas", json=nueva_area, headers=ESTUDIANTE_HEADERS)
+    assert response.status_code == 403
+
+
 
