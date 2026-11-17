@@ -1,7 +1,7 @@
 from fastapi import Request
 from fastapi.testclient import TestClient
 from main import app
-from auth import get_current_identity, get_current_user
+from auth import get_current_identity, get_current_user, require_role
 import routers.usuarios as usuarios_router
 
 client = TestClient(app)
@@ -43,6 +43,12 @@ app.dependency_overrides[get_current_identity] = lambda: {
     "id": "00000000-0000-4000-8000-000000000001",
     "email": "demo@example.com",
 }
+
+
+def test_role_guard_accepts_capitalized_database_role():
+    current_user = {"rol": "Admin"}
+
+    assert require_role(["admin"])(current_user) is current_user
 
 
 def test_read_root():

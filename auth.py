@@ -155,8 +155,11 @@ def get_current_user(
 
 
 def require_role(allowed_roles: List[str]):
+    normalized_allowed_roles = {role.strip().casefold() for role in allowed_roles}
+
     def role_verifier(current_user: Dict[str, Any] = Depends(get_current_user)):
-        if current_user.get("rol") not in allowed_roles:
+        role = current_user.get("rol")
+        if not isinstance(role, str) or role.strip().casefold() not in normalized_allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permisos suficientes para realizar esta acción",
