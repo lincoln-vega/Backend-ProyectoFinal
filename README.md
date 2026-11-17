@@ -38,6 +38,15 @@ desplegar el backend. La migración elimina las columnas `password` y
 `universidad` de `public.users`; los perfiles anteriores quedan sin vínculo de
 Auth hasta que se asocien a una cuenta.
 
+### Imagen Docker para InsForge Compute
+
+El workflow `.github/workflows/deploy.yml` publica en GHCR al hacer push a
+`main`. La imagen se etiqueta como
+`ghcr.io/lincoln-vega/backend-proyectofinal:main` y también con el SHA del
+commit. En pull requests solo se construye, no se publica. `db.json`, `.env` y
+`.insforge` se excluyen del contexto/imagen; configura `DATABASE_URL` e
+`INSFORGE_HOST` en el servicio de Compute.
+
 ### Asistencia docente Meet en InsForge
 
 El registro manual de asistencia docente también está desplegado en el proyecto
