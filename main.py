@@ -28,4 +28,4 @@ app.include_router(academicos.router)
 # Ruta raíz para verificar que el servidor enciende
 @app.get("/")
 def read_root():
-    return {"mensaje": "Bienvenido al Backend de Academia SCRM 🚀", "docs": "/docs"}
+    return {"mensaje": "Bienvenido al Backend de Academia SCRM"}
