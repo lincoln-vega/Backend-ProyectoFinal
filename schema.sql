@@ -6,15 +6,14 @@
 -- 1. TABLA: users (Usuarios del sistema, roles RBAC y salarios)
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
+    auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     apellidos TEXT NOT NULL,
     nombres TEXT NOT NULL,
     "tipoDocumento" TEXT DEFAULT 'DNI', -- 'DNI', 'CE', 'Pasaporte'
     dni TEXT,
     "fechaNacimiento" TEXT,
     correo TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
     celular TEXT,
-    universidad TEXT,
     "carreraObjetivo" TEXT,
     "areaAcademica" TEXT,
     rol TEXT NOT NULL DEFAULT 'estudiante', -- 'admin', 'docente', 'estudiante'
@@ -270,24 +269,24 @@ CREATE TABLE IF NOT EXISTS ciclo_carreras (
 
 -- A. USUARIOS
 INSERT INTO users (
-  id, apellidos, nombres, dni, "fechaNacimiento", correo, password, celular,
-  universidad, "carreraObjetivo", "areaAcademica", rol, estado,
+  id, apellidos, nombres, dni, "fechaNacimiento", correo, celular,
+  "carreraObjetivo", "areaAcademica", rol, estado,
   "cursosAsignados", "cursosInscritos", ciclovirtual, salario
 ) VALUES
-('USR-001', 'Morales Salazar', 'Roberto Carlos', '41235678', '1985-04-12', 'admin@gmail.com', 'admin123', '987654321', 'UNMSM', 'Dirección Académica', 'Gestión Institucional', 'admin', 'Activo', '[]'::jsonb, '[]'::jsonb, 'Semestral', 4500.00),
-('USR-002', 'Herrera Villanueva', 'Carmen Rosa', '45678912', '1988-06-20', 'c.herrera@academia.edu.pe', 'docente123', '987111222', 'UNMSM', 'Cátedra de Álgebra y Aritmética', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-001", "CRS-006"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
-('USR-003', 'Paredes Ruiz', 'Miguel Ángel', '48923104', '1990-09-15', 'm.paredes@academia.edu.pe', 'docente123', '987222333', 'UNI', 'Cátedra de Física e Historia', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-002", "CRS-008"]'::jsonb, '[]'::jsonb, 'Semestral', 3000.00),
-('USR-004', 'Torres Meléndez', 'Elena Sofía', '43219876', '1987-03-25', 'e.torres@academia.edu.pe', 'docente123', '987333444', 'UPCH', 'Cátedra de Biología y Anatomía', 'Ciencias Médicas', 'docente', 'Activo', '["CRS-003", "CRS-007"]'::jsonb, '[]'::jsonb, 'Semestral', 3500.00),
-('USR-008', 'Torres Sánchez', 'Jesús Héctor', '47891234', '1992-11-08', 'j.torres@academia.edu.pe', 'docente123', '987444555', 'UNI', 'Cátedra de Programación (Python)', 'Programación', 'docente', 'Activo', '["CRS-004"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
-('USR-009', 'Pérez Ramos', 'Juan Gabriel', '46781290', '1989-07-19', 'j.perez@academia.edu.pe', 'docente123', '987555666', 'UNI', 'Cátedra de Matemática Avanzada', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-005"]'::jsonb, '[]'::jsonb, 'Semestral', 3400.00),
-('USR-005', 'Flores Mendoza', 'Juan Carlos', '74839201', '2005-02-18', 'estudiante@gmail.com', 'estudiante123', '955112233', 'UNMSM', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-003"]'::jsonb, 'Semestral', 0.00),
-('USR-006', 'Quispe Alarcón', 'Valeria Sofía', '76543210', '2004-10-14', 'v.quispe@academia.edu.pe', 'estudiante123', '955223344', 'UNI', 'Ingeniería de Sistemas', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-004", "CRS-005"]'::jsonb, 'Semestral', 0.00),
-('USR-007', 'Gómez Pérez', 'Lucía Fernanda', '73214569', '2005-05-30', 'l.gomez@academia.edu.pe', 'estudiante123', '955334455', 'PUCP', 'Derecho', 'Humanidades y Letras', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-007", "CRS-008"]'::jsonb, 'Semestral', 0.00),
-('USR-010', 'Flores Mendoza', 'Diego', '75849302', '2004-08-22', 'd.flores@academia.edu.pe', 'estudiante123', '955445566', 'UNI', 'Ingeniería Industrial', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-006"]'::jsonb, 'Intensivo', 0.00),
-('USR-011', 'Morales Ruiz', 'Elena', '71928374', '2005-01-09', 'e.morales@academia.edu.pe', 'estudiante123', '955556677', 'UNMSM', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-003", "CRS-007"]'::jsonb, 'Semestral', 0.00)
+('USR-001', 'Morales Salazar', 'Roberto Carlos', '41235678', '1985-04-12', 'admin@gmail.com', '987654321', 'Dirección Académica', 'Gestión Institucional', 'admin', 'Activo', '[]'::jsonb, '[]'::jsonb, 'Semestral', 4500.00),
+('USR-002', 'Herrera Villanueva', 'Carmen Rosa', '45678912', '1988-06-20', 'c.herrera@academia.edu.pe', '987111222', 'Cátedra de Álgebra y Aritmética', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-001", "CRS-006"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
+('USR-003', 'Paredes Ruiz', 'Miguel Ángel', '48923104', '1990-09-15', 'm.paredes@academia.edu.pe', '987222333', 'Cátedra de Física e Historia', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-002", "CRS-008"]'::jsonb, '[]'::jsonb, 'Semestral', 3000.00),
+('USR-004', 'Torres Meléndez', 'Elena Sofía', '43219876', '1987-03-25', 'e.torres@academia.edu.pe', '987333444', 'Cátedra de Biología y Anatomía', 'Ciencias Médicas', 'docente', 'Activo', '["CRS-003", "CRS-007"]'::jsonb, '[]'::jsonb, 'Semestral', 3500.00),
+('USR-008', 'Torres Sánchez', 'Jesús Héctor', '47891234', '1992-11-08', 'j.torres@academia.edu.pe', '987444555', 'Cátedra de Programación (Python)', 'Programación', 'docente', 'Activo', '["CRS-004"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
+('USR-009', 'Pérez Ramos', 'Juan Gabriel', '46781290', '1989-07-19', 'j.perez@academia.edu.pe', '987555666', 'Cátedra de Matemática Avanzada', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-005"]'::jsonb, '[]'::jsonb, 'Semestral', 3400.00),
+('USR-005', 'Flores Mendoza', 'Juan Carlos', '74839201', '2005-02-18', 'estudiante@gmail.com', '955112233', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-003"]'::jsonb, 'Semestral', 0.00),
+('USR-006', 'Quispe Alarcón', 'Valeria Sofía', '76543210', '2004-10-14', 'v.quispe@academia.edu.pe', '955223344', 'Ingeniería de Sistemas', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-004", "CRS-005"]'::jsonb, 'Semestral', 0.00),
+('USR-007', 'Gómez Pérez', 'Lucía Fernanda', '73214569', '2005-05-30', 'l.gomez@academia.edu.pe', '955334455', 'Derecho', 'Humanidades y Letras', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-007", "CRS-008"]'::jsonb, 'Semestral', 0.00),
+('USR-010', 'Flores Mendoza', 'Diego', '75849302', '2004-08-22', 'd.flores@academia.edu.pe', '955445566', 'Ingeniería Industrial', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-006"]'::jsonb, 'Intensivo', 0.00),
+('USR-011', 'Morales Ruiz', 'Elena', '71928374', '2005-01-09', 'e.morales@academia.edu.pe', '955556677', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-003", "CRS-007"]'::jsonb, 'Semestral', 0.00)
 ON CONFLICT (id) DO UPDATE SET
   apellidos = EXCLUDED.apellidos, nombres = EXCLUDED.nombres, dni = EXCLUDED.dni, "fechaNacimiento" = EXCLUDED."fechaNacimiento",
-  correo = EXCLUDED.correo, password = EXCLUDED.password, celular = EXCLUDED.celular, universidad = EXCLUDED.universidad,
+  correo = EXCLUDED.correo, celular = EXCLUDED.celular,
   "carreraObjetivo" = EXCLUDED."carreraObjetivo", "areaAcademica" = EXCLUDED."areaAcademica", rol = EXCLUDED.rol,
   estado = EXCLUDED.estado, "cursosAsignados" = EXCLUDED."cursosAsignados", "cursosInscritos" = EXCLUDED."cursosInscritos",
   ciclovirtual = EXCLUDED.ciclovirtual, salario = EXCLUDED.salario;
