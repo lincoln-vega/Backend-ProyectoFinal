@@ -542,3 +542,18 @@ def test_endpoint_validar_datos_carnet_extranjeria_invalido():
     assert "dni" in response.json()["detail"]["errores"]
 
 
+def test_endpoint_actividades_listar_tareas():
+    """Valida que el endpoint /tareas/ retorne una lista de tareas."""
+    response = client.get("/tareas/")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_endpoint_actividades_listar_anuncios():
+    """Valida que el endpoint /anuncios/ retorne una lista de comunicados."""
+    response = client.get("/anuncios/")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+
