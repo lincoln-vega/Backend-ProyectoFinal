@@ -402,8 +402,8 @@
             "asignatura": "Python I",
             "area": "Ciencias Exactas e Ingenierías",
             "carrera": "Ingeniería de Sistemas",
-            "docenteId": "USR-0337",
-            "docente": "Harry Luis Styles London",
+            "docenteId": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
             "dias": [
                 "Lunes",
                 "Jueves"
@@ -421,8 +421,8 @@
             "asignatura": "Razonamiento Matemático",
             "area": "Gestión Institucional y Empresarial",
             "carrera": "Economia",
-            "docenteId": "USR-0337",
-            "docente": "Harry Luis Styles London",
+            "docenteId": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
             "dias": [
                 "Lunes",
                 "Miércoles",
@@ -606,6 +606,57 @@
         }
     ],
     "incidents": [
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-19 00:29",
+            "fechaResolucion": "2026-11-19 00:29:39"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-19 00:29",
+            "fechaResolucion": "2026-11-19 00:29:39",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-19 00:29"
+        },
         {
             "id": "INC-TEST-FORBIDDEN",
             "docenteId": null,
@@ -2231,6 +2282,22 @@
     ],
     "tareas": [
         {
+            "id": "TSK-182214",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fechaLimite": "Viernes, 11:59 PM",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar"
+        },
+        {
             "id": "TSK-684916",
             "cursoId": "CRS-7474",
             "curso_id": "CRS-7474",
@@ -2489,6 +2556,18 @@
     ],
     "anuncios": [
         {
+            "id": "ANN-183345",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez"
+        },
+        {
             "id": "ANN-686037",
             "cursoId": "CRS-7474",
             "curso_id": "CRS-7474",
@@ -2686,10 +2765,10 @@
             "curso_id": "CRS-002",
             "curso": "Física Fundamental",
             "mensaje": "¿El examen incluirá temas de estática vectorial?",
-            "fecha": "Hoy, 12:04 AM",
+            "fecha": "Hoy, 12:29 AM",
             "estado": "Respondido",
             "respuesta": "Sí Esteban, vendrán 2 problemas de equilibrio de fuerzas.",
-            "fecha_respuesta": "Hoy, 12:04 AM"
+            "fecha_respuesta": "Hoy, 12:29 AM"
         },
         {
             "id": "MSG-001",
