@@ -619,6 +619,261 @@
             "motivo": "Cita médica.",
             "archivoNombre": "constancia_o_solicitud.pdf",
             "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-19 00:04",
+            "fechaResolucion": "2026-11-19 00:04:42"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-19 00:04",
+            "fechaResolucion": "2026-11-19 00:04:42",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-19 00:04"
+        },
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-19 00:04",
+            "fechaResolucion": "2026-11-19 00:04:32"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-19 00:04",
+            "fechaResolucion": "2026-11-19 00:04:32",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-19 00:04"
+        },
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 23:58",
+            "fechaResolucion": "2026-11-18 23:58:58"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 23:58",
+            "fechaResolucion": "2026-11-18 23:58:58",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-18 23:58"
+        },
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 23:58",
+            "fechaResolucion": "2026-11-18 23:58:23"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 23:58",
+            "fechaResolucion": "2026-11-18 23:58:23",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-18 23:58"
+        },
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 23:57",
+            "fechaResolucion": "2026-11-18 23:57:08"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 23:57",
+            "fechaResolucion": "2026-11-18 23:57:07",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-18 23:57"
+        },
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
             "fechaPresentacion": "2026-11-18 19:56",
             "fechaResolucion": "2026-11-18 19:56:12"
         },
@@ -1514,7 +1769,9 @@
             "nombre": "Ciencias Exactas e Ingenierías",
             "descripcion": "Matemáticas, Física, Química, Computación e ingenierías afines",
             "color": "#2563EB",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "AREA-MED",
@@ -1522,7 +1779,9 @@
             "nombre": "Ciencias Médicas y de la Salud",
             "descripcion": "Medicina Humana, Enfermería, Odontología, Biología y afines",
             "color": "#DC2626",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "AREA-HUM",
@@ -1530,7 +1789,9 @@
             "nombre": "Humanidades y Ciencias Sociales",
             "descripcion": "Derecho, Literatura, Historia, Filosofía y afines",
             "color": "#7C3AED",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "AREA-GES",
@@ -1538,7 +1799,9 @@
             "nombre": "Gestión Institucional y Empresarial",
             "descripcion": "Administración, Economía, Contabilidad y Dirección",
             "color": "#059669",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         }
     ],
     "carreras": [
@@ -1555,7 +1818,9 @@
                 "UPCH",
                 "UNFV"
             ],
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "CAR-002",
@@ -1570,7 +1835,9 @@
                 "UNMSM",
                 "PUCP"
             ],
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "CAR-003",
@@ -1585,7 +1852,9 @@
                 "UNMSM",
                 "UNIFE"
             ],
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "CAR-004",
@@ -1600,7 +1869,178 @@
                 "UNMSM",
                 "ULIMA"
             ],
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
+        },
+        {
+            "id": "CAR-005",
+            "codigo": "ECO",
+            "nombre": "Economia",
+            "area_id": "AREA-GES",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T02:40:10.522016+00:00",
+            "updated_at": "2026-11-18T02:40:10.522016+00:00"
+        },
+        {
+            "id": "CAR-006",
+            "codigo": "CON-DAD",
+            "nombre": "Contabilidad",
+            "area_id": "AREA-GES",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:00:59.185694+00:00",
+            "updated_at": "2026-11-18T03:00:59.185694+00:00"
+        },
+        {
+            "id": "CAR-007",
+            "codigo": "GES-ADM",
+            "nombre": "Gestión Administrativa",
+            "area_id": "AREA-GES",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:01:18.913954+00:00",
+            "updated_at": "2026-11-18T03:01:18.913954+00:00"
+        },
+        {
+            "id": "CAR-008",
+            "codigo": "ENF-RIA",
+            "nombre": "Enfermería",
+            "area_id": "AREA-MED",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:01:18.913954+00:00",
+            "updated_at": "2026-11-18T03:01:18.913954+00:00"
+        },
+        {
+            "id": "CAR-009",
+            "codigo": "ODO-GIA",
+            "nombre": "Odontología",
+            "area_id": "AREA-MED",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:02:07.728833+00:00",
+            "updated_at": "2026-11-18T03:02:07.728833+00:00"
+        },
+        {
+            "id": "CAR-010",
+            "codigo": "BIO-GIA",
+            "nombre": "Biología",
+            "area_id": "AREA-MED",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:02:07.728833+00:00",
+            "updated_at": "2026-11-18T03:02:07.728833+00:00"
+        },
+        {
+            "id": "CAR-011",
+            "codigo": "LIT-TUR",
+            "nombre": "Literatura",
+            "area_id": "AREA-HUM",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:04:45.937841+00:00",
+            "updated_at": "2026-11-18T03:04:45.937841+00:00"
+        },
+        {
+            "id": "CAR-012",
+            "codigo": "HIS-RIA",
+            "nombre": "Historia",
+            "area_id": "AREA-HUM",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:04:45.937841+00:00",
+            "updated_at": "2026-11-18T03:04:45.937841+00:00"
+        },
+        {
+            "id": "CAR-013",
+            "codigo": "FIL-FIA",
+            "nombre": "Filosofía",
+            "area_id": "AREA-HUM",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:04:45.937841+00:00",
+            "updated_at": "2026-11-18T03:04:45.937841+00:00"
+        },
+        {
+            "id": "CAR-014",
+            "codigo": "FIS-CA",
+            "nombre": "Física",
+            "area_id": "AREA-EXA",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:07:31.669808+00:00",
+            "updated_at": "2026-11-18T03:07:31.669808+00:00"
+        },
+        {
+            "id": "CAR-015",
+            "codigo": "MAT-CAS",
+            "nombre": "Matemáticas",
+            "area_id": "AREA-EXA",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:07:31.669808+00:00",
+            "updated_at": "2026-11-18T03:07:31.669808+00:00"
+        },
+        {
+            "id": "CAR-016",
+            "codigo": "QUI-ICA",
+            "nombre": "Química",
+            "area_id": "AREA-EXA",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:07:31.669808+00:00",
+            "updated_at": "2026-11-18T03:07:31.669808+00:00"
+        },
+        {
+            "id": "CAR-017",
+            "codigo": "ARQ-URA",
+            "nombre": "Arquitectura",
+            "area_id": "AREA-EXA",
+            "descripcion": null,
+            "duracion_anios": 5,
+            "grado_academico": "Bachiller / Título Profesional",
+            "universidades_objetivo": [],
+            "estado": "Activo",
+            "created_at": "2026-11-18T03:07:31.669808+00:00",
+            "updated_at": "2026-11-18T03:07:31.669808+00:00"
         }
     ],
     "tipos_ciclo": [
@@ -1611,7 +2051,9 @@
             "duracion_semanas": 24,
             "modalidad": "Virtual",
             "descripcion": "Preparación semestral intensiva con desarrollo temático completo.",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "TCIC-ANU",
@@ -1620,7 +2062,9 @@
             "duracion_semanas": 44,
             "modalidad": "Virtual",
             "descripcion": "Preparación anual integral desde nivel cero hasta avanzado.",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "TCIC-INT",
@@ -1629,7 +2073,9 @@
             "duracion_semanas": 8,
             "modalidad": "Virtual",
             "descripcion": "Ciclo rápido y condensado de verano o repaso preuniversitario.",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "TCIC-REP",
@@ -1638,7 +2084,9 @@
             "duracion_semanas": 6,
             "modalidad": "Virtual",
             "descripcion": "Resolución masiva de exámenes tipo admisión y simulacros.",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "TCIC-ESC",
@@ -1647,7 +2095,9 @@
             "duracion_semanas": 12,
             "modalidad": "Virtual",
             "descripcion": "Nivelación y fortalecimiento para estudiantes de 4to y 5to de secundaria.",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00",
+            "updated_at": "2026-11-15T00:59:19.598970+00:00"
         }
     ],
     "ciclos_academicos": [
@@ -1719,7 +2169,8 @@
             "nombre": "Mañana",
             "hora_inicio": "08:00",
             "hora_fin": "13:00",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "TUR-TAR",
@@ -1727,7 +2178,8 @@
             "nombre": "Tarde",
             "hora_inicio": "14:00",
             "hora_fin": "19:00",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "TUR-NOC",
@@ -1735,7 +2187,8 @@
             "nombre": "Noche",
             "hora_inicio": "18:00",
             "hora_fin": "22:00",
-            "estado": "Activo"
+            "estado": "Activo",
+            "created_at": "2026-11-15T00:59:19.598970+00:00"
         }
     ],
     "ciclo_carreras": [
@@ -1745,7 +2198,8 @@
             "carrera_id": "CAR-001",
             "vacantes_totales": 50,
             "vacantes_ocupadas": 42,
-            "estado": "Disponible"
+            "estado": "Disponible",
+            "created_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "OFE-2026-SEM1-SIS",
@@ -1753,7 +2207,8 @@
             "carrera_id": "CAR-002",
             "vacantes_totales": 45,
             "vacantes_ocupadas": 38,
-            "estado": "Disponible"
+            "estado": "Disponible",
+            "created_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "OFE-2026-SEM1-DER",
@@ -1761,7 +2216,8 @@
             "carrera_id": "CAR-003",
             "vacantes_totales": 40,
             "vacantes_ocupadas": 29,
-            "estado": "Disponible"
+            "estado": "Disponible",
+            "created_at": "2026-11-15T00:59:19.598970+00:00"
         },
         {
             "id": "OFE-2026-SEM1-IND",
@@ -1769,10 +2225,91 @@
             "carrera_id": "CAR-004",
             "vacantes_totales": 35,
             "vacantes_ocupadas": 20,
-            "estado": "Disponible"
+            "estado": "Disponible",
+            "created_at": "2026-11-15T00:59:19.598970+00:00"
         }
     ],
     "tareas": [
+        {
+            "id": "TSK-684916",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fechaLimite": "Viernes, 11:59 PM",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar"
+        },
+        {
+            "id": "TSK-673273",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fechaLimite": "Viernes, 11:59 PM",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar"
+        },
+        {
+            "id": "TSK-339145",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fechaLimite": "Viernes, 11:59 PM",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar"
+        },
+        {
+            "id": "TSK-306197",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fechaLimite": "Viernes, 11:59 PM",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar"
+        },
+        {
+            "id": "TSK-230347",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fechaLimite": "Viernes, 11:59 PM",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar"
+        },
         {
             "id": "TSK-774048",
             "cursoId": "CRS-7474",
@@ -1952,6 +2489,66 @@
     ],
     "anuncios": [
         {
+            "id": "ANN-686037",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez"
+        },
+        {
+            "id": "ANN-673336",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez"
+        },
+        {
+            "id": "ANN-339230",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez"
+        },
+        {
+            "id": "ANN-307326",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez"
+        },
+        {
+            "id": "ANN-231461",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez"
+        },
+        {
             "id": "ANN-775104",
             "cursoId": "CRS-7474",
             "curso_id": "CRS-7474",
@@ -2079,6 +2676,90 @@
     ],
     "mensajes": [
         {
+            "id": "MSG-TEST-UNIT-01",
+            "estudiante_id": "USR-108",
+            "estudiante_nombre": "Esteban Torres",
+            "estudiante_correo": "esteban@gmail.com",
+            "estudiante_carrera": "Medicina Humana (UNMSM)",
+            "docente_id": "USR-107",
+            "docente_nombre": "Pedro Martlon Chavez Quispe",
+            "curso_id": "CRS-002",
+            "curso": "Física Fundamental",
+            "mensaje": "¿El examen incluirá temas de estática vectorial?",
+            "fecha": "Hoy, 12:04 AM",
+            "estado": "Respondido",
+            "respuesta": "Sí Esteban, vendrán 2 problemas de equilibrio de fuerzas.",
+            "fecha_respuesta": "Hoy, 12:04 AM"
+        },
+        {
+            "id": "MSG-001",
+            "estudiante_id": "USR-005",
+            "estudiante_nombre": "Juan Carlos Flores Mendoza",
+            "estudiante_correo": "estudiante@gmail.com",
+            "estudiante_carrera": "Ingeniería de Sistemas (UNI)",
+            "docente_id": "USR-107",
+            "docente_nombre": "Pedro Martlon Chavez Quispe",
+            "curso_id": "CRS-002",
+            "curso": "Física Fundamental",
+            "mensaje": "Profesor Chavez, buenas tardes. Tengo una consulta sobre dinámica lineal y el cálculo de la fuerza resultante en el plano inclinado del taller N° 3.",
+            "fecha": "Hoy, 10:15 AM",
+            "estado": "Respondido",
+            "respuesta": "Estimado Juan Carlos, recuerda descomponer el peso en los ejes tangencial y normal. En clase revisamos el problema 4 a detalle.",
+            "fecha_respuesta": "Hoy, 10:45 AM",
+            "created_at": "2026-11-19T04:46:33.469342+00:00"
+        },
+        {
+            "id": "MSG-002",
+            "estudiante_id": "USR-108",
+            "estudiante_nombre": "Esteban Torres",
+            "estudiante_correo": "esteban@gmail.com",
+            "estudiante_carrera": "Medicina Humana (UNMSM)",
+            "docente_id": "USR-002",
+            "docente_nombre": "Carmen Rosa Herrera Villanueva",
+            "curso_id": "CRS-003",
+            "curso": "Biología y Anatomía",
+            "mensaje": "Doctora Herrera, buenas tardes. En el ciclo de Krebs y la cadena de transporte de electrones, ¿cuántos ATP netos se consideran para el prospecto de admisión de San Marcos?",
+            "fecha": "Hoy, 09:20 AM",
+            "estado": "Respondido",
+            "respuesta": "Hola Esteban. Para el prospecto UNMSM se consideran 36 a 38 ATPs según la lanzadera activa (malato-aspartato vs glicerol-3-fosfato).",
+            "fecha_respuesta": "Hoy, 09:55 AM",
+            "created_at": "2026-11-19T04:46:33.469342+00:00"
+        },
+        {
+            "id": "MSG-003",
+            "estudiante_id": "USR-3066",
+            "estudiante_nombre": "Ana Paula Vargas Chavez",
+            "estudiante_correo": "anapaula@gmail.com",
+            "estudiante_carrera": "Derecho y Ciencias Políticas (UNMSM)",
+            "docente_id": "USR-109",
+            "docente_nombre": "Victoria Angelis Raggi Ruiz",
+            "curso_id": "CRS-008",
+            "curso": "Historia Universal",
+            "mensaje": "Profesora Victoria, buenas tardes. ¿El tema del periodo de entreguerras y el ascenso de los totalitarismos entrará en el simulacro de este domingo?",
+            "fecha": "Hoy, 08:45 AM",
+            "estado": "Pendiente",
+            "respuesta": null,
+            "fecha_respuesta": null,
+            "created_at": "2026-11-19T04:46:33.469342+00:00"
+        },
+        {
+            "id": "MSG-004",
+            "estudiante_id": "USR-108",
+            "estudiante_nombre": "Esteban Torres",
+            "estudiante_correo": "esteban@gmail.com",
+            "estudiante_carrera": "Medicina Humana (UNMSM)",
+            "docente_id": "USR-002",
+            "docente_nombre": "Carmen Rosa Herrera Villanueva",
+            "curso_id": "CRS-006",
+            "curso": "Química General",
+            "mensaje": "Doctora Herrera, en el taller de estequiometría: ¿en las reacciones redox debemos balancear por ion-electrón en medio ácido?",
+            "fecha": "Ayer, 04:15 PM",
+            "estado": "Pendiente",
+            "respuesta": null,
+            "fecha_respuesta": null,
+            "created_at": "2026-11-19T04:46:33.469342+00:00"
+        },
+        {
             "id": "MSG-TEST-ALUMNO-01",
             "estudiante_id": "USR-108",
             "estudiante_nombre": "Esteban Torres",
@@ -2092,7 +2773,8 @@
             "fecha": "Hoy, 11:51 PM",
             "estado": "Respondido",
             "respuesta": "Claro Esteban, lo resolveremos al inicio de la sesión virtual.",
-            "fecha_respuesta": "Hoy, 11:51 PM"
+            "fecha_respuesta": "Hoy, 11:51 PM",
+            "created_at": "2026-11-19T04:51:26.530545+00:00"
         }
     ]
 }

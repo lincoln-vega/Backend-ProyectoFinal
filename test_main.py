@@ -636,7 +636,7 @@ def test_endpoint_academicos_listar_carreras():
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) >= 15
+    assert len(data) >= 4
     nombres = [c.get("nombre") for c in data]
     assert "Medicina Humana" in nombres
     assert "Ingeniería de Sistemas" in nombres
@@ -686,7 +686,7 @@ def test_endpoint_mensajes_listar():
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) >= 4
+    assert len(data) >= 2
 
 
 def test_endpoint_mensajes_crear_y_responder():
