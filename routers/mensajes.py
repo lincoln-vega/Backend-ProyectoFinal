@@ -23,6 +23,10 @@ class MensajeCreate(BaseModel):
     mensaje: str
     fecha: Optional[str] = None
     estado: str = "Pendiente"
+    destinatario_tipo: Optional[str] = Field("docente", alias="destinatarioTipo")
+    destinatario_id: Optional[str] = Field(None, alias="destinatarioId")
+    destinatario_nombre: Optional[str] = Field(None, alias="destinatarioNombre")
+    destinatario_correo: Optional[str] = Field(None, alias="destinatarioCorreo")
 
 class RespuestaCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -41,21 +45,25 @@ def listar_mensajes(
     Retorna la lista de consultas o mensajes académicos.
     Permite filtrar opcionalmente por docente_id, estudiante_correo o curso_id.
     """
+    d_id = docente_id if isinstance(docente_id, str) and docente_id.strip() else None
+    e_correo = estudiante_correo if isinstance(estudiante_correo, str) and estudiante_correo.strip() else None
+    c_id = curso_id if isinstance(curso_id, str) and curso_id.strip() else None
+
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 query = "SELECT * FROM mensajes WHERE 1=1"
                 params = []
-                if docente_id:
-                    query += " AND (docente_id = %s OR docente_id = 'USR-107')"
-                    params.append(docente_id)
-                if estudiante_correo:
-                    query += " AND LOWER(estudiante_correo) = LOWER(%s)"
-                    params.append(estudiante_correo.strip())
-                if curso_id:
+                if d_id:
+                    query += " AND (docente_id = %s OR destinatario_id = %s)"
+                    params.extend([d_id, d_id])
+                if e_correo:
+                    query += " AND (LOWER(estudiante_correo) = LOWER(%s) OR LOWER(COALESCE(destinatario_correo, '')) = LOWER(%s))"
+                    params.extend([e_correo.strip(), e_correo.strip()])
+                if c_id:
                     query += " AND curso_id = %s"
-                    params.append(curso_id)
+                    params.append(c_id)
 
                 query += " ORDER BY created_at DESC"
                 cur.execute(query, tuple(params))
@@ -70,19 +78,28 @@ def listar_mensajes(
     # Fallback a db.json
     db = load_db()
     mensajes = db.get("mensajes", [])
-    if docente_id:
-        mensajes = [m for m in mensajes if m.get("docente_id") == docente_id or m.get("docenteId") == docente_id]
-    if estudiante_correo:
-        mensajes = [m for m in mensajes if (m.get("estudiante_correo") or m.get("estudianteCorreo") or "").lower() == estudiante_correo.lower()]
-    if curso_id:
-        mensajes = [m for m in mensajes if m.get("curso_id") == curso_id or m.get("cursoId") == curso_id]
+    if d_id:
+        mensajes = [
+            m for m in mensajes
+            if m.get("docente_id") == d_id or m.get("docenteId") == d_id
+            or m.get("destinatario_id") == d_id or m.get("destinatarioId") == d_id
+        ]
+    if e_correo:
+        e_low = e_correo.lower()
+        mensajes = [
+            m for m in mensajes
+            if (m.get("estudiante_correo") or m.get("estudianteCorreo") or "").lower() == e_low
+            or (m.get("destinatario_correo") or m.get("destinatarioCorreo") or "").lower() == e_low
+        ]
+    if c_id:
+        mensajes = [m for m in mensajes if m.get("curso_id") == c_id or m.get("cursoId") == c_id]
     return mensajes
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def enviar_mensaje(mensaje_data: MensajeCreate):
     """
-    Registra una nueva consulta de un estudiante hacia un docente.
+    Registra una nueva consulta de un estudiante hacia un docente o compañero.
     Persiste en PostgreSQL y sincroniza con db.json.
     """
     clean_id = mensaje_data.id or f"MSG-{int(time.time() * 1000)}"
@@ -102,7 +119,11 @@ def enviar_mensaje(mensaje_data: MensajeCreate):
         "fecha": fecha_actual,
         "estado": "Pendiente",
         "respuesta": None,
-        "fecha_respuesta": None
+        "fecha_respuesta": None,
+        "destinatario_tipo": mensaje_data.destinatario_tipo or "docente",
+        "destinatario_id": mensaje_data.destinatario_id or mensaje_data.docente_id,
+        "destinatario_nombre": mensaje_data.destinatario_nombre or mensaje_data.docente_nombre,
+        "destinatario_correo": mensaje_data.destinatario_correo or ""
     }
 
     conn = get_pg_connection()
@@ -114,8 +135,10 @@ def enviar_mensaje(mensaje_data: MensajeCreate):
                     INSERT INTO mensajes (
                         id, estudiante_id, estudiante_nombre, estudiante_correo,
                         estudiante_carrera, docente_id, docente_nombre, curso_id,
-                        curso, mensaje, fecha, estado, respuesta, fecha_respuesta, created_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                        curso, mensaje, fecha, estado, respuesta, fecha_respuesta,
+                        destinatario_tipo, destinatario_id, destinatario_nombre, destinatario_correo,
+                        created_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                     ON CONFLICT (id) DO UPDATE SET
                         mensaje = EXCLUDED.mensaje,
                         estado = EXCLUDED.estado;
@@ -125,7 +148,9 @@ def enviar_mensaje(mensaje_data: MensajeCreate):
                         payload["estudiante_correo"], payload["estudiante_carrera"],
                         payload["docente_id"], payload["docente_nombre"], payload["curso_id"],
                         payload["curso"], payload["mensaje"], payload["fecha"],
-                        payload["estado"], payload["respuesta"], payload["fecha_respuesta"]
+                        payload["estado"], payload["respuesta"], payload["fecha_respuesta"],
+                        payload["destinatario_tipo"], payload["destinatario_id"],
+                        payload["destinatario_nombre"], payload["destinatario_correo"]
                     )
                 )
                 conn.commit()

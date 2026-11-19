@@ -195,6 +195,7 @@ def listar_usuarios():
                 cur.execute("""
                     SELECT id, nombres, apellidos, "tipoDocumento", dni, "fechaNacimiento", correo, celular,
                            "carreraObjetivo", "areaAcademica", rol, estado,
+                           "cursosAsignados", "cursosInscritos", especialidad,
                            ciclovirtual, salario, created_at
                     FROM users
                     ORDER BY created_at DESC;
