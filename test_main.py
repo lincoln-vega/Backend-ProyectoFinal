@@ -556,4 +556,65 @@ def test_endpoint_actividades_listar_anuncios():
     assert isinstance(response.json(), list)
 
 
+def test_endpoint_actividades_crear_tarea_como_docente():
+    """Valida que un docente pueda crear una tarea académica (201 Created)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "tipo": "Tarea Calificada",
+        "titulo": "Práctica N° 1: POO y Herencia",
+        "descripcion": "Desarrollar clases en Java.",
+        "fechaLimite": "Viernes, 11:59 PM",
+        "puntos": "20 pts",
+        "docente": "Prof. Pedro Chavez"
+    }
+    response = client.post("/tareas/", headers=DOCENTE_HEADERS, json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["titulo"] == "Práctica N° 1: POO y Herencia"
+
+
+def test_endpoint_actividades_crear_tarea_como_estudiante_rechazado():
+    """Valida que un estudiante no pueda crear tareas (403 Forbidden)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "titulo": "Intento no autorizado",
+        "fechaLimite": "Mañana",
+        "docente": "Estudiante Test"
+    }
+    response = client.post("/tareas/", headers=ESTUDIANTE_HEADERS, json=payload)
+    assert response.status_code == 403
+
+
+def test_endpoint_actividades_crear_anuncio_como_docente():
+    """Valida que un docente pueda publicar un anuncio (201 Created)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "titulo": "Material de clase disponible",
+        "contenido": "Se subieron las diapositivas de POO.",
+        "prioridad": "Alta",
+        "docente": "Prof. Pedro Chavez"
+    }
+    response = client.post("/anuncios/", headers=DOCENTE_HEADERS, json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["titulo"] == "Material de clase disponible"
+
+
+def test_endpoint_actividades_crear_anuncio_como_estudiante_rechazado():
+    """Valida que un estudiante no pueda publicar anuncios (403 Forbidden)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "titulo": "Aviso ilegal",
+        "contenido": "Sin permisos",
+        "docente": "Estudiante Test"
+    }
+    response = client.post("/anuncios/", headers=ESTUDIANTE_HEADERS, json=payload)
+    assert response.status_code == 403
+
+
+
 
