@@ -382,13 +382,41 @@ def eliminar_usuario(identificador: str):
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM users WHERE id = %s OR correo = %s RETURNING id;", 
-                            (identificador, identificador))
-                deleted = cur.fetchone()
-                conn.commit()
-                if not deleted:
+                # 1. Consultar id, correo y auth_user_id antes de eliminar
+                cur.execute(
+                    "SELECT id, correo, auth_user_id FROM users WHERE id = %s OR correo = %s;",
+                    (identificador, identificador)
+                )
+                row = fetch_one_as_dict(cur)
+                if not row:
                     raise HTTPException(status_code=404, detail="Usuario no encontrado")
-                return {"mensaje": "Usuario eliminado correctamente"}
+
+                user_id = row["id"]
+                user_email = row["correo"]
+                auth_id = row.get("auth_user_id")
+
+                # 2. Eliminar de public.users
+                cur.execute("DELETE FROM users WHERE id = %s;", (user_id,))
+
+                # 3. Eliminar de auth.users para permitir recrear el usuario limpiamente
+                if auth_id:
+                    try:
+                        cur.execute("DELETE FROM auth.users WHERE id = %s::uuid;", (auth_id,))
+                    except Exception as e_auth:
+                        print(f"[Eliminar Usuario] No se pudo eliminar de auth.users por id: {e_auth}")
+                elif user_email:
+                    try:
+                        cur.execute("DELETE FROM auth.users WHERE email = %s;", (user_email,))
+                    except Exception as e_auth:
+                        print(f"[Eliminar Usuario] No se pudo eliminar de auth.users por email: {e_auth}")
+
+                conn.commit()
+                return {"mensaje": f"Usuario {user_id} eliminado correctamente de la base de datos y de Auth"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"Error al eliminar usuario: {str(e)}")
         finally:
             conn.close()
 
