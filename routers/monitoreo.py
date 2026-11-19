@@ -6,6 +6,7 @@ from auth import require_role
 router = APIRouter(prefix="/monitoreo", tags=["Monitoreo y Reglas"])
 
 def verificar_cruce_virtual(nuevo_curso: dict, cursos_existentes: list):
+    curso_id_nuevo = str(nuevo_curso.get("id", "")).strip()
     docente_nuevo = nuevo_curso.get("docenteId")
     dias_nuevos = nuevo_curso.get("dias", [])
     
@@ -19,6 +20,10 @@ def verificar_cruce_virtual(nuevo_curso: dict, cursos_existentes: list):
         fin_nuevo = datetime.strptime(str(nuevo_curso.get("horaFin")).strip(), "%I:%M %p").time()
 
     for c in cursos_existentes:
+        # Omitir el mismo curso cuando se está editando para no generar falso positivo consigo mismo
+        if curso_id_nuevo and str(c.get("id", "")).strip() == curso_id_nuevo:
+            continue
+
         if c.get("docenteId") == docente_nuevo:
             dias_existentes = c.get("dias", [])
             dias_en_comun = set(dias_nuevos).intersection(set(dias_existentes))
@@ -44,7 +49,7 @@ def verificar_cruce_virtual(nuevo_curso: dict, cursos_existentes: list):
     }
 
 @router.post("/validar-curso")
-def evaluar_nuevo_curso(curso: dict, current_user: dict = Depends(require_role(["admin"]))):
+def evaluar_nuevo_curso(curso: dict, current_user: dict = Depends(require_role(["admin", "docente"]))):
     cursos_existentes = []
     conn = get_pg_connection()
     if conn:
