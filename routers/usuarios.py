@@ -252,9 +252,20 @@ def crear_usuario(
                     detail="Ya existe un perfil con ese correo, documento o cuenta de Auth.",
                 )
 
-            cur.execute("SELECT COUNT(*) FROM users;")
-            count_row = fetch_one_as_dict(cur)
-            user_dict["id"] = f"USR-{(count_row['count'] if count_row else 0) + 101:03d}"
+            cur.execute("SELECT id FROM users WHERE id ~ '^USR-[0-9]+$';")
+            existing_ids = fetch_all_as_dict(cur)
+            existing_numbers = set()
+            for r in existing_ids:
+                try:
+                    existing_numbers.add(int(r["id"].split("-")[1]))
+                except (ValueError, IndexError):
+                    pass
+
+            next_candidate = 101
+            while next_candidate in existing_numbers:
+                next_candidate += 1
+
+            user_dict["id"] = f"USR-{next_candidate:03d}"
 
             cur.execute(
                 """
@@ -298,6 +309,7 @@ def crear_usuario(
     except Exception as exc:
         conn.rollback()
         err_msg = str(exc)
+        print(f"[Usuarios] Error guardando perfil: {err_msg}")
         if "check_users_dni" in err_msg:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

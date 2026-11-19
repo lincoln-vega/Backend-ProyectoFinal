@@ -407,6 +407,7 @@ def test_crear_usuario_guarda_perfil_sin_password_ni_universidad(monkeypatch):
     class FakeCursor:
         description = None
         row = None
+        rows = []
         insert_query = ""
         insert_values = ()
 
@@ -417,12 +418,14 @@ def test_crear_usuario_guarda_perfil_sin_password_ni_universidad(monkeypatch):
             return False
 
         def execute(self, query, values=()):
-            if "SELECT id FROM users" in query:
+            if "WHERE correo = %s OR dni = %s OR auth_user_id" in query:
                 self.description = [("id",)]
                 self.row = None
-            elif "SELECT COUNT(*) FROM users" in query:
-                self.description = [("count",)]
-                self.row = (0,)
+                self.rows = []
+            elif "SELECT COUNT(*) FROM users" in query or "WHERE id ~" in query:
+                self.description = [("id",)]
+                self.row = ("USR-100",)
+                self.rows = [("USR-100",)]
             elif "INSERT INTO users" in query:
                 self.insert_query = query
                 self.insert_values = values
@@ -457,11 +460,15 @@ def test_crear_usuario_guarda_perfil_sin_password_ni_universidad(monkeypatch):
                     "docente",
                     "Activo",
                 )
+                self.rows = [self.row]
             else:
                 raise AssertionError(f"Unexpected SQL in test: {query}")
 
         def fetchone(self):
             return self.row
+
+        def fetchall(self):
+            return getattr(self, "rows", [self.row] if self.row else [])
 
     class FakeConnection:
         def __init__(self):
