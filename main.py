@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import usuarios, horarios, asistencia, monitoreo, matriculas, incidencias, academicos, actividades
+from routers import usuarios, horarios, asistencia, monitoreo, matriculas, incidencias, academicos, actividades, mensajes
 
 app = FastAPI(
     title="API Backend - Academia SCRM", 
@@ -27,6 +27,7 @@ app.include_router(incidencias.router)
 app.include_router(academicos.router)
 app.include_router(actividades.router_tareas)
 app.include_router(actividades.router_anuncios)
+app.include_router(mensajes.router)
 # Ruta raíz para verificar que el servidor enciende
 @app.get("/")
 def read_root():

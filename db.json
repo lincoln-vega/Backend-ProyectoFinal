@@ -2076,5 +2076,23 @@
             "docente": "Prof. Pedro Chavez",
             "created_at": "2026-11-19 00:45:19.009455+00:00"
         }
+    ],
+    "mensajes": [
+        {
+            "id": "MSG-TEST-ALUMNO-01",
+            "estudiante_id": "USR-108",
+            "estudiante_nombre": "Esteban Torres",
+            "estudiante_correo": "esteban@gmail.com",
+            "estudiante_carrera": "Medicina Humana (UNMSM)",
+            "docente_id": "USR-107",
+            "docente_nombre": "Pedro Martlon Chavez Quispe",
+            "curso_id": "CRS-002",
+            "curso": "Física Fundamental",
+            "mensaje": "Profesor Chavez, ¿podría explicar el problema 5 de dinámica?",
+            "fecha": "Hoy, 11:51 PM",
+            "estado": "Respondido",
+            "respuesta": "Claro Esteban, lo resolveremos al inicio de la sesión virtual.",
+            "fecha_respuesta": "Hoy, 11:51 PM"
+        }
     ]
 }

@@ -178,7 +178,10 @@ def login(form_data: UserLogin):
         "access_token": access_token,
         "token_type": "bearer",
         "role": user["rol"],
-        "name": f"{user['nombres']} {user['apellidos']}"
+        "name": f"{user['nombres']} {user['apellidos']}",
+        "userId": user["id"],
+        "id": user["id"],
+        "email": user.get("correo")
     }
 
 # --- CRUD DE USUARIOS ---

@@ -678,6 +678,48 @@ def test_endpoint_academicos_crear_area_prohibido_estudiante():
     assert response.status_code == 403
 
 
+# --- PRUEBAS DE MENSAJERÍA Y CONSULTAS ACADÉMICAS BIDIRECCIONALES ---
+
+def test_endpoint_mensajes_listar():
+    """Valida que se listen las consultas académicas."""
+    response = client.get("/mensajes/")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 4
+
+
+def test_endpoint_mensajes_crear_y_responder():
+    """Valida el ciclo completo: estudiante consulta y docente responde."""
+    nuevo_msg = {
+        "id": "MSG-TEST-UNIT-01",
+        "estudianteId": "USR-108",
+        "estudianteNombre": "Esteban Torres",
+        "estudianteCorreo": "esteban@gmail.com",
+        "estudianteCarrera": "Medicina Humana (UNMSM)",
+        "docenteId": "USR-107",
+        "docenteNombre": "Prof. Pedro Chavez",
+        "cursoId": "CRS-002",
+        "curso": "Física Fundamental",
+        "mensaje": "¿El examen incluirá temas de estática vectorial?"
+    }
+    res_crear = client.post("/mensajes/", json=nuevo_msg)
+    assert res_crear.status_code == 201
+    creado = res_crear.json()
+    assert creado["id"] == "MSG-TEST-UNIT-01"
+    assert creado["estado"] == "Pendiente"
+
+    # Docente responde
+    respuesta_payload = {
+        "respuesta": "Sí Esteban, vendrán 2 problemas de equilibrio de fuerzas.",
+        "docenteNombre": "Pedro Martlon Chavez Quispe"
+    }
+    res_resp = client.patch("/mensajes/MSG-TEST-UNIT-01/respuesta", json=respuesta_payload)
+    assert res_resp.status_code == 200
+    assert res_resp.json()["estado"] == "Respondido"
+
+
+
 
 
 
