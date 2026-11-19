@@ -230,7 +230,7 @@
         {
             "id": "CRS-001",
             "asignatura": "Álgebra y Funciones",
-            "area": "Ciencias Exactas",
+            "area": "Ciencias Exactas e Ingenierías",
             "carrera": "Ingeniería de Sistemas",
             "docenteId": "USR-003",
             "docente": "Prof. Miguel Ángel Paredes",
@@ -243,6 +243,7 @@
             "meetUrl": "https://meet.google.com/rqe-czhu-ubx",
             "repositorio": "drive.google.com/algebra101",
             "estado": "Activo",
+            "created_at": "2026-10-15 14:40:09.180223+00:00",
             "ciclovirtual": "Semestral",
             "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
             "reemplazoActivo": true
@@ -250,10 +251,10 @@
         {
             "id": "CRS-002",
             "asignatura": "Física Fundamental",
-            "area": "Ciencias Exactas",
+            "area": "Ciencias Exactas e Ingenierías",
             "carrera": "Ingeniería de Sistemas",
-            "docenteId": "USR-003",
-            "docente": "Miguel Ángel Paredes Ruiz",
+            "docenteId": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
             "dias": [
                 "Martes",
                 "Jueves"
@@ -263,15 +264,16 @@
             "meetUrl": "https://meet.google.com/bdt-nycg-cfu",
             "repositorio": "drive.google.com/fisica101",
             "estado": "Activo",
+            "created_at": "2026-10-15 14:40:09.180223+00:00",
             "ciclovirtual": "Semestral"
         },
         {
             "id": "CRS-003",
             "asignatura": "Biología y Anatomía",
-            "area": "Ciencias Médicas",
+            "area": "Ciencias Médicas y de la Salud",
             "carrera": "Medicina Humana",
-            "docenteId": "USR-004",
-            "docente": "Elena Sofía Torres Meléndez",
+            "docenteId": "USR-002",
+            "docente": "Carmen Rosa Herrera Villanueva",
             "dias": [
                 "Lunes",
                 "Viernes"
@@ -281,15 +283,16 @@
             "meetUrl": "https://meet.google.com/kuu-qrhg-adx",
             "repositorio": "drive.google.com/biologia101",
             "estado": "Activo",
+            "created_at": "2026-10-15 14:40:09.180223+00:00",
             "ciclovirtual": "Semestral"
         },
         {
             "id": "CRS-004",
-            "asignatura": "Python para Ingenieros",
-            "area": "Programación",
+            "asignatura": "Trigonometría",
+            "area": "Ciencias Exactas e Ingenierías",
             "carrera": "Ingeniería de Sistemas",
-            "docenteId": "USR-008",
-            "docente": "Jesús Héctor Torres Sánchez",
+            "docenteId": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
             "dias": [
                 "Lunes",
                 "Miércoles"
@@ -299,15 +302,16 @@
             "meetUrl": "https://meet.google.com/kxp-fzwp-yci",
             "repositorio": "drive.google.com/python101",
             "estado": "Activo",
+            "created_at": "2026-10-15 14:40:09.180223+00:00",
             "ciclovirtual": "Semestral"
         },
         {
             "id": "CRS-005",
-            "asignatura": "Matemática II (Cálculo)",
-            "area": "Ciencias Exactas",
-            "carrera": "Ingeniería de Sistemas",
-            "docenteId": "USR-009",
-            "docente": "Juan Gabriel Pérez Ramos",
+            "asignatura": "Geometría",
+            "area": "Ciencias Exactas e Ingenierías",
+            "carrera": "Ingeniería Industrial",
+            "docenteId": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
             "dias": [
                 "Martes",
                 "Jueves"
@@ -317,13 +321,14 @@
             "meetUrl": "https://meet.google.com/qqw-byud-qyq",
             "repositorio": "drive.google.com/mat201",
             "estado": "Activo",
+            "created_at": "2026-10-20 03:21:39.751851+00:00",
             "ciclovirtual": "Semestral"
         },
         {
             "id": "CRS-006",
-            "asignatura": "Aritmética Preuniversitaria",
-            "area": "Ciencias Exactas",
-            "carrera": "Ingeniería de Sistemas",
+            "asignatura": "Química General",
+            "area": "Ciencias Médicas y de la Salud",
+            "carrera": "Medicina Humana",
             "docenteId": "USR-002",
             "docente": "Carmen Rosa Herrera Villanueva",
             "dias": [
@@ -334,15 +339,16 @@
             "meetUrl": "https://meet.google.com/uxm-jcvt-bmh",
             "repositorio": "drive.google.com/aritmetica101",
             "estado": "Activo",
+            "created_at": "2026-10-20 05:05:59.883988+00:00",
             "ciclovirtual": "Semestral"
         },
         {
             "id": "CRS-007",
             "asignatura": "Historia del Perú",
-            "area": "Humanidades y Letras",
-            "carrera": "Derecho",
-            "docenteId": "USR-004",
-            "docente": "Elena Sofía Torres Meléndez",
+            "area": "Humanidades y Ciencias Sociales",
+            "carrera": "Derecho y Ciencias Políticas",
+            "docenteId": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
             "dias": [
                 "Viernes"
             ],
@@ -351,15 +357,16 @@
             "meetUrl": "https://meet.google.com/vii-hfrm-oqm",
             "repositorio": "drive.google.com/historia-peru",
             "estado": "Activo",
+            "created_at": "2026-10-20 14:06:07.191235+00:00",
             "ciclovirtual": "Semestral"
         },
         {
             "id": "CRS-008",
             "asignatura": "Historia Universal",
-            "area": "Humanidades y Letras",
-            "carrera": "Derecho",
-            "docenteId": "USR-003",
-            "docente": "Miguel Ángel Paredes Ruiz",
+            "area": "Humanidades y Ciencias Sociales",
+            "carrera": "Derecho y Ciencias Políticas",
+            "docenteId": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
             "dias": [
                 "Sábado"
             ],
@@ -368,6 +375,65 @@
             "meetUrl": "https://meet.google.com/dzb-swzj-ois",
             "repositorio": "drive.google.com/historia-universal",
             "estado": "Activo",
+            "created_at": "2026-10-20 14:09:23.528568+00:00",
+            "ciclovirtual": "Semestral"
+        },
+        {
+            "id": "CRS-009",
+            "asignatura": "Geografía y Ecología",
+            "area": "Humanidades y Ciencias Sociales",
+            "carrera": "Derecho y Ciencias Políticas",
+            "docenteId": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
+            "dias": [
+                "Lunes",
+                "Miércoles"
+            ],
+            "horaInicio": "14:00",
+            "horaFin": "16:00",
+            "meetUrl": "https://meet.google.com/geo-eco-adm",
+            "repositorio": "drive.google.com/geografia",
+            "estado": "Activo",
+            "created_at": "2026-11-19 00:43:09.667450+00:00",
+            "ciclovirtual": "Semestral"
+        },
+        {
+            "id": "CRS-7175",
+            "asignatura": "Python I",
+            "area": "Ciencias Exactas e Ingenierías",
+            "carrera": "Ingeniería de Sistemas",
+            "docenteId": "USR-0337",
+            "docente": "Harry Luis Styles London",
+            "dias": [
+                "Lunes",
+                "Jueves"
+            ],
+            "horaInicio": "08:00",
+            "horaFin": "10:00",
+            "meetUrl": "https://meet.google.com/new",
+            "repositorio": "https://drive.google.com",
+            "estado": "Activo",
+            "created_at": "2026-11-18 23:58:02.709189+00:00",
+            "ciclovirtual": "Semestral"
+        },
+        {
+            "id": "CRS-7474",
+            "asignatura": "Razonamiento Matemático",
+            "area": "Gestión Institucional y Empresarial",
+            "carrera": "Economia",
+            "docenteId": "USR-0337",
+            "docente": "Harry Luis Styles London",
+            "dias": [
+                "Lunes",
+                "Miércoles",
+                "Jueves"
+            ],
+            "horaInicio": "13:00",
+            "horaFin": "15:00",
+            "meetUrl": "https://meet.google.com/new",
+            "repositorio": "https://drive.google.com",
+            "estado": "Activo",
+            "created_at": "2026-11-17 06:00:50.693991+00:00",
             "ciclovirtual": "Semestral"
         }
     ],
@@ -540,6 +606,108 @@
         }
     ],
     "incidents": [
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 19:48",
+            "fechaResolucion": "2026-11-18 19:48:20"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 19:48",
+            "fechaResolucion": "2026-11-18 19:48:20",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-18 19:48"
+        },
+        {
+            "id": "INC-TEST-FORBIDDEN",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 19:47",
+            "fechaResolucion": "2026-11-18 19:47:07"
+        },
+        {
+            "id": "INC-TEST-TRANS",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Inasistencia Inesperada",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Cita médica programada.",
+            "archivoNombre": "constancia_o_solicitud.pdf",
+            "estado": "Aprobado",
+            "fechaPresentacion": "2026-11-18 19:47",
+            "fechaResolucion": "2026-11-18 19:47:07",
+            "observacionesResolucion": "Reemplazo aprobado por dirección académica.",
+            "docenteReemplazo": "Prof. Miguel Ángel Paredes",
+            "docenteReemplazoId": "USR-003",
+            "horarioActualizado": "Lunes y Miércoles 08:00 - 10:00 AM"
+        },
+        {
+            "id": "INC-TEST-01",
+            "docenteId": null,
+            "docente": "Prof. Carmen Rosa Herrera",
+            "dni": null,
+            "correo": null,
+            "tipo": "Solicitud de Permuta / Reemplazo",
+            "materia": "Álgebra y Funciones",
+            "cursoId": "CRS-001",
+            "horario": "Lunes y Miércoles 08:00 - 10:00 AM",
+            "motivo": "Sustentación de grado académico.",
+            "archivoNombre": "constancia_sustentacion.pdf",
+            "estado": "Pendiente",
+            "fechaPresentacion": "2026-11-18 19:47"
+        },
         {
             "id": "INC-TEST-FORBIDDEN",
             "docenteId": null,
@@ -1504,7 +1672,7 @@
     ],
     "tareas": [
         {
-            "id": "TSK-391073",
+            "id": "TSK-302322",
             "cursoId": "CRS-7474",
             "curso_id": "CRS-7474",
             "curso": "Programacion con Java",
@@ -1518,11 +1686,139 @@
             "docente_id": null,
             "docente": "Prof. Pedro Chavez",
             "estado": "Por entregar"
+        },
+        {
+            "id": "TSK-229407",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fechaLimite": "Viernes, 11:59 PM",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar"
+        },
+        {
+            "id": "TSK-002",
+            "curso_id": "CRS-002",
+            "curso": "Física Fundamental",
+            "tipo": "Guía de Ejercicios",
+            "titulo": "Taller N° 3: Cinemática y Leyes de Newton",
+            "descripcion": "Resolver los problemas de dinámica lineal con diagramas de cuerpo libre.",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docente_id": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
+            "estado": "Por entregar",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "TSK-003",
+            "curso_id": "CRS-003",
+            "curso": "Biología y Anatomía",
+            "tipo": "Cuestionario Virtual",
+            "titulo": "Autoevaluación: Genética y Sistema Nervioso",
+            "descripcion": "Cuestionario de 20 preguntas con retroalimentación inmediata sobre bases celulares.",
+            "fecha_limite": "Entregado ayer",
+            "puntos": "20 pts",
+            "docente_id": "USR-002",
+            "docente": "Carmen Rosa Herrera Villanueva",
+            "estado": "Entregado",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "TSK-004",
+            "curso_id": "CRS-004",
+            "curso": "Trigonometría",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica Calificada: Identidades Trigonométricas",
+            "descripcion": "Demostrar las 5 identidades auxiliares de ángulos compuestos paso a paso.",
+            "fecha_limite": "Lunes, 11:59 PM",
+            "puntos": "20 pts",
+            "docente_id": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
+            "estado": "Por entregar",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "TSK-006",
+            "curso_id": "CRS-006",
+            "curso": "Química General",
+            "tipo": "Guía Práctica",
+            "titulo": "Taller N° 2: Estequiometría y Enlaces Químicos",
+            "descripcion": "Balancear las ecuaciones redox y calcular el reactivo limitante en los 8 ejercicios.",
+            "fecha_limite": "Jueves, 11:59 PM",
+            "puntos": "20 pts",
+            "docente_id": "USR-002",
+            "docente": "Carmen Rosa Herrera Villanueva",
+            "estado": "Por entregar",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "TSK-007",
+            "curso_id": "CRS-007",
+            "curso": "Historia del Perú",
+            "tipo": "Ensayo Crítico",
+            "titulo": "Ensayo: Reformas Borbónicas y Crisis Virreinal",
+            "descripcion": "Elaborar un ensayo analítico de 2 páginas sobre el impacto socioeconómico en los Andes.",
+            "fecha_limite": "Sábado, 06:00 PM",
+            "puntos": "20 pts",
+            "docente_id": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
+            "estado": "Por entregar",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "TSK-008",
+            "curso_id": "CRS-008",
+            "curso": "Historia Universal",
+            "tipo": "Control de Lectura",
+            "titulo": "Análisis: Primera Guerra Mundial y Tratado de Versalles",
+            "descripcion": "Responder las 10 preguntas analíticas de la separata teórica N° 4.",
+            "fecha_limite": "Domingo, 11:59 PM",
+            "puntos": "20 pts",
+            "docente_id": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
+            "estado": "Por entregar",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "TSK-009",
+            "curso_id": "CRS-009",
+            "curso": "Geografía y Ecología",
+            "tipo": "Cartografía Práctica",
+            "titulo": "Taller Cartográfico: Ocho Regiones Naturales del Perú",
+            "descripcion": "Completar el mapa hidrográfico y pisos altitudinales de Javier Pulgar Vidal.",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docente_id": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
+            "estado": "Por entregar",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "TSK-117177",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "tipo": "Tarea Calificada",
+            "titulo": "Práctica N° 1: POO y Herencia",
+            "descripcion": "Desarrollar clases en Java.",
+            "fecha_limite": "Viernes, 11:59 PM",
+            "puntos": "20 pts",
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "estado": "Por entregar",
+            "created_at": "2026-11-19 00:45:17.948908+00:00"
         }
     ],
     "anuncios": [
         {
-            "id": "ANN-392116",
+            "id": "ANN-303384",
             "cursoId": "CRS-7474",
             "curso_id": "CRS-7474",
             "curso": "Programacion con Java",
@@ -1532,6 +1828,95 @@
             "docenteId": null,
             "docente_id": null,
             "docente": "Prof. Pedro Chavez"
+        },
+        {
+            "id": "ANN-230465",
+            "cursoId": "CRS-7474",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docenteId": null,
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez"
+        },
+        {
+            "id": "ANN-002",
+            "curso_id": "CRS-002",
+            "curso": "Física Fundamental",
+            "titulo": "Sesión de Repaso de Estática y Dinámica",
+            "contenido": "Estimados alumnos, este jueves a las 06:00 PM nos conectaremos a Google Meet para resolver dudas previas a la práctica.",
+            "prioridad": "Alta",
+            "docente_id": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "ANN-003",
+            "curso_id": "CRS-003",
+            "curso": "Biología y Anatomía",
+            "titulo": "Banco de Preguntas UNMSM: Sistema Circulatorio",
+            "contenido": "Alumnos de Ciencias Médicas, ya está disponible el compendio de preguntas de anatomía en la pestaña del curso.",
+            "prioridad": "Alta",
+            "docente_id": "USR-002",
+            "docente": "Carmen Rosa Herrera Villanueva",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "ANN-004",
+            "curso_id": "CRS-004",
+            "curso": "Trigonometría",
+            "titulo": "Formulario oficial de Identidades Auxiliares",
+            "contenido": "He compartido en la biblioteca digital el formulario resumido para resolver con rapidez los ejercicios del simulacro.",
+            "prioridad": "Importante",
+            "docente_id": "USR-107",
+            "docente": "Pedro Martlon Chavez Quispe",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "ANN-006",
+            "curso_id": "CRS-006",
+            "curso": "Química General",
+            "titulo": "Tabla Periódica Interactiva y Ejercicios Resueltos",
+            "contenido": "Pueden descargar la guía de estados de oxidación y balance de masa desde los enlaces oficiales.",
+            "prioridad": "Normal",
+            "docente_id": "USR-002",
+            "docente": "Carmen Rosa Herrera Villanueva",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "ANN-007",
+            "curso_id": "CRS-007",
+            "curso": "Historia del Perú",
+            "titulo": "Lectura obligatoria: Rebeliones Indígenas del Siglo XVIII",
+            "contenido": "Revisar la lectura sobre Túpac Amaru II antes de la sesión virtual del día martes.",
+            "prioridad": "Importante",
+            "docente_id": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "ANN-008",
+            "curso_id": "CRS-008",
+            "curso": "Historia Universal",
+            "titulo": "Seminario dominical: Periodo de Entreguerras",
+            "contenido": "Este domingo de 10:00 AM a 12:00 PM realizaremos un seminario virtual abierto para postulantes a Derecho y Letras.",
+            "prioridad": "Alta",
+            "docente_id": "USR-109",
+            "docente": "Victoria Angelis Raggi Ruiz",
+            "created_at": "2026-11-19 00:43:09.667450+00:00"
+        },
+        {
+            "id": "ANN-118246",
+            "curso_id": "CRS-7474",
+            "curso": "Programacion con Java",
+            "titulo": "Material de clase disponible",
+            "contenido": "Se subieron las diapositivas de POO.",
+            "prioridad": "Alta",
+            "docente_id": null,
+            "docente": "Prof. Pedro Chavez",
+            "created_at": "2026-11-19 00:45:19.009455+00:00"
         }
     ]
 }

@@ -104,10 +104,10 @@ def test_crear_curso_prohibido_para_estudiante():
 def test_motor_reglas_cruce_docente():
     """
     Valida que el motor de reglas detecte el cruce si se intenta asignar
-    un horario superpuesto para el mismo docente (Dra. Elena, USR-004, Lunes de 15:00 a 17:00).
+    un horario superpuesto para el mismo docente (Dra. Carmen Rosa Herrera, USR-002, Lunes de 15:00 a 17:00).
     """
     curso_con_cruce = {
-        "docenteId": "USR-004",
+        "docenteId": "USR-002",
         "dias": ["Lunes"],
         "horaInicio": "15:30",
         "horaFin": "16:30"
