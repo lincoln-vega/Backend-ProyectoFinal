@@ -616,5 +616,68 @@ def test_endpoint_actividades_crear_anuncio_como_estudiante_rechazado():
     assert response.status_code == 403
 
 
+# --- PRUEBAS DE CATÁLOGO ACADÉMICO (APORTACIONES COMPAÑEROS - SOFIA) ---
+
+def test_endpoint_academicos_listar_areas():
+    """Valida que se listen las áreas académicas registradas."""
+    response = client.get("/academicos/areas")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 4
+    codigos = [a.get("codigo") for a in data]
+    assert "CIENCIAS-EXACTAS" in codigos
+    assert "HUMANIDADES" in codigos
+
+
+def test_endpoint_academicos_listar_carreras():
+    """Valida que se listen las carreras universitarias objetivo."""
+    response = client.get("/academicos/carreras")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 15
+    nombres = [c.get("nombre") for c in data]
+    assert "Medicina Humana" in nombres
+    assert "Ingeniería de Sistemas" in nombres
+
+
+def test_endpoint_academicos_listar_ciclos_y_turnos():
+    """Valida los endpoints de tipos de ciclo, ciclos académicos y turnos."""
+    res_tipos = client.get("/academicos/tipos-ciclo")
+    assert res_tipos.status_code == 200
+    assert len(res_tipos.json()) >= 4
+
+    res_ciclos = client.get("/academicos/ciclos")
+    assert res_ciclos.status_code == 200
+    assert len(res_ciclos.json()) >= 4
+
+    res_turnos = client.get("/academicos/turnos")
+    assert res_turnos.status_code == 200
+    assert len(res_turnos.json()) >= 3
+
+
+def test_endpoint_academicos_oferta_consolidada():
+    """Valida el endpoint de oferta académica que vincula ciclos y carreras."""
+    response = client.get("/academicos/oferta")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 4
+    assert "carrera_id" in data[0] or "ciclo_id" in data[0]
+
+
+def test_endpoint_academicos_crear_area_prohibido_estudiante():
+    """Valida que un estudiante no pueda crear áreas académicas (403 Forbidden)."""
+    payload = {
+        "codigo": "AREA-TEST",
+        "nombre": "Área no autorizada",
+        "descripcion": "Intento de registro sin rol admin"
+    }
+    response = client.post("/academicos/areas", headers=ESTUDIANTE_HEADERS, json=payload)
+    assert response.status_code == 403
+
+
+
 
 
