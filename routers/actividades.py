@@ -1,9 +1,10 @@
 import time
 from typing import Optional
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field, ConfigDict
 from database import load_db, save_db, get_pg_connection
 from psycopg2.extras import RealDictCursor
+from auth import require_role
 
 router_tareas = APIRouter(prefix="/tareas", tags=["Tareas Académicas"])
 router_anuncios = APIRouter(prefix="/anuncios", tags=["Anuncios Académicos"])
@@ -87,7 +88,7 @@ def listar_tareas(curso_id: Optional[str] = None):
         return [t for t in tareas if t.get("curso_id") == curso_id or t.get("cursoId") == curso_id]
     return tareas
 
-@router_tareas.post("/", status_code=status.HTTP_201_CREATED)
+@router_tareas.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(["admin", "docente"]))])
 def crear_tarea(tarea: TareaCreate):
     """
     Crea una nueva tarea académica tanto en PostgreSQL como en db.json.
@@ -149,7 +150,7 @@ def crear_tarea(tarea: TareaCreate):
 
     return nueva_tarea_dict
 
-@router_tareas.patch("/{tarea_id}")
+@router_tareas.patch("/{tarea_id}", dependencies=[Depends(require_role(["admin", "docente", "estudiante"]))])
 def actualizar_tarea(tarea_id: str, tarea_update: TareaUpdate):
     """
     Actualiza el estado u otros campos de una tarea.
@@ -210,7 +211,7 @@ def actualizar_tarea(tarea_id: str, tarea_update: TareaUpdate):
 
     raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
-@router_tareas.delete("/{tarea_id}")
+@router_tareas.delete("/{tarea_id}", dependencies=[Depends(require_role(["admin", "docente"]))])
 def eliminar_tarea(tarea_id: str):
     """
     Elimina una tarea por su ID.
@@ -277,7 +278,7 @@ def listar_anuncios(curso_id: Optional[str] = None):
         return [a for a in anuncios if a.get("curso_id") == curso_id or a.get("cursoId") == curso_id]
     return anuncios
 
-@router_anuncios.post("/", status_code=status.HTTP_201_CREATED)
+@router_anuncios.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(["admin", "docente"]))])
 def crear_anuncio(anuncio: AnuncioCreate):
     """
     Publica un nuevo anuncio o comunicado académico.
@@ -332,7 +333,7 @@ def crear_anuncio(anuncio: AnuncioCreate):
 
     return nuevo_anuncio_dict
 
-@router_anuncios.delete("/{anuncio_id}")
+@router_anuncios.delete("/{anuncio_id}", dependencies=[Depends(require_role(["admin", "docente"]))])
 def eliminar_anuncio(anuncio_id: str):
     """
     Elimina un anuncio por su ID.

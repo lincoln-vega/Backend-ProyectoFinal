@@ -6,15 +6,14 @@
 -- 1. TABLA: users (Usuarios del sistema, roles RBAC y salarios)
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
+    auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     apellidos TEXT NOT NULL,
     nombres TEXT NOT NULL,
     "tipoDocumento" TEXT DEFAULT 'DNI', -- 'DNI', 'CE', 'Pasaporte'
     dni TEXT,
     "fechaNacimiento" TEXT,
     correo TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
     celular TEXT,
-    universidad TEXT,
     "carreraObjetivo" TEXT,
     "areaAcademica" TEXT,
     rol TEXT NOT NULL DEFAULT 'estudiante', -- 'admin', 'docente', 'estudiante'
@@ -180,30 +179,114 @@ CREATE TABLE IF NOT EXISTS meet_attendance (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 9. TABLA: areas_academicas (Facultades o áreas del conocimiento institucional)
+CREATE TABLE IF NOT EXISTS areas_academicas (
+    id TEXT PRIMARY KEY,
+    codigo TEXT UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    color TEXT DEFAULT '#2563EB',
+    estado TEXT NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Inactivo')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. TABLA: carreras (Carreras profesionales / Programas académicos)
+CREATE TABLE IF NOT EXISTS carreras (
+    id TEXT PRIMARY KEY,
+    codigo TEXT UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
+    area_id TEXT NOT NULL REFERENCES areas_academicas(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    descripcion TEXT,
+    duracion_anios INTEGER DEFAULT 5 CHECK (duracion_anios > 0),
+    grado_academico TEXT DEFAULT 'Bachiller / Título Profesional',
+    universidades_objetivo JSONB DEFAULT '[]'::jsonb,
+    estado TEXT NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Inactivo')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 11. TABLA: tipos_ciclo (Modalidades de ciclo: Semestral, Anual, Intensivo, etc.)
+CREATE TABLE IF NOT EXISTS tipos_ciclo (
+    id TEXT PRIMARY KEY,
+    codigo TEXT UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
+    duracion_semanas INTEGER NOT NULL CHECK (duracion_semanas > 0),
+    modalidad TEXT NOT NULL DEFAULT 'Virtual' CHECK (modalidad IN ('Virtual', 'Presencial', 'Híbrido')),
+    descripcion TEXT,
+    estado TEXT NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Inactivo')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. TABLA: ciclos_academicos (Periodos / convocatorias concretas de dictado)
+CREATE TABLE IF NOT EXISTS ciclos_academicos (
+    id TEXT PRIMARY KEY,
+    codigo TEXT UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
+    tipo_ciclo_id TEXT NOT NULL REFERENCES tipos_ciclo(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    anio INTEGER NOT NULL CHECK (anio >= 2020),
+    periodo TEXT NOT NULL DEFAULT 'I',
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    costo_matricula NUMERIC(10, 2) DEFAULT 0.00 CHECK (costo_matricula >= 0),
+    costo_pension_mensual NUMERIC(10, 2) DEFAULT 0.00 CHECK (costo_pension_mensual >= 0),
+    costo_total_contado NUMERIC(10, 2) DEFAULT 0.00 CHECK (costo_total_contado >= 0),
+    es_vigente BOOLEAN DEFAULT false,
+    estado TEXT NOT NULL DEFAULT 'En Curso' CHECK (estado IN ('Planificado', 'En Convocatoria', 'En Curso', 'Finalizado', 'Cerrado')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_ciclo_fechas CHECK (fecha_fin >= fecha_inicio)
+);
+
+-- 13. TABLA: turnos (Turnos de estudio de la institución)
+CREATE TABLE IF NOT EXISTS turnos (
+    id TEXT PRIMARY KEY,
+    codigo TEXT UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
+    hora_inicio TEXT NOT NULL,
+    hora_fin TEXT NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Inactivo')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. TABLA: ciclo_carreras (Oferta académica por ciclo: vacantes y disponibilidad)
+CREATE TABLE IF NOT EXISTS ciclo_carreras (
+    id TEXT PRIMARY KEY,
+    ciclo_id TEXT NOT NULL REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    carrera_id TEXT NOT NULL REFERENCES carreras(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    vacantes_totales INTEGER DEFAULT 40 CHECK (vacantes_totales >= 0),
+    vacantes_ocupadas INTEGER DEFAULT 0 CHECK (vacantes_ocupadas >= 0),
+    estado TEXT NOT NULL DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'Agotado', 'Cerrado')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_ciclo_carrera UNIQUE (ciclo_id, carrera_id),
+    CONSTRAINT check_vacantes CHECK (vacantes_ocupadas <= vacantes_totales)
+);
+
 -- ==============================================================================
 -- SEMILLA MAESTRA INSTITUCIONAL (DATOS LIMPIOS Y NORMALIZADOS)
 -- ==============================================================================
 
 -- A. USUARIOS
 INSERT INTO users (
-  id, apellidos, nombres, dni, "fechaNacimiento", correo, password, celular,
-  universidad, "carreraObjetivo", "areaAcademica", rol, estado,
+  id, apellidos, nombres, dni, "fechaNacimiento", correo, celular,
+  "carreraObjetivo", "areaAcademica", rol, estado,
   "cursosAsignados", "cursosInscritos", ciclovirtual, salario
 ) VALUES
-('USR-001', 'Morales Salazar', 'Roberto Carlos', '41235678', '1985-04-12', 'admin@gmail.com', 'admin123', '987654321', 'UNMSM', 'Dirección Académica', 'Gestión Institucional', 'admin', 'Activo', '[]'::jsonb, '[]'::jsonb, 'Semestral', 4500.00),
-('USR-002', 'Herrera Villanueva', 'Carmen Rosa', '45678912', '1988-06-20', 'c.herrera@academia.edu.pe', 'docente123', '987111222', 'UNMSM', 'Cátedra de Álgebra y Aritmética', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-001", "CRS-006"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
-('USR-003', 'Paredes Ruiz', 'Miguel Ángel', '48923104', '1990-09-15', 'm.paredes@academia.edu.pe', 'docente123', '987222333', 'UNI', 'Cátedra de Física e Historia', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-002", "CRS-008"]'::jsonb, '[]'::jsonb, 'Semestral', 3000.00),
-('USR-004', 'Torres Meléndez', 'Elena Sofía', '43219876', '1987-03-25', 'e.torres@academia.edu.pe', 'docente123', '987333444', 'UPCH', 'Cátedra de Biología y Anatomía', 'Ciencias Médicas', 'docente', 'Activo', '["CRS-003", "CRS-007"]'::jsonb, '[]'::jsonb, 'Semestral', 3500.00),
-('USR-008', 'Torres Sánchez', 'Jesús Héctor', '47891234', '1992-11-08', 'j.torres@academia.edu.pe', 'docente123', '987444555', 'UNI', 'Cátedra de Programación (Python)', 'Programación', 'docente', 'Activo', '["CRS-004"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
-('USR-009', 'Pérez Ramos', 'Juan Gabriel', '46781290', '1989-07-19', 'j.perez@academia.edu.pe', 'docente123', '987555666', 'UNI', 'Cátedra de Matemática Avanzada', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-005"]'::jsonb, '[]'::jsonb, 'Semestral', 3400.00),
-('USR-005', 'Flores Mendoza', 'Juan Carlos', '74839201', '2005-02-18', 'estudiante@gmail.com', 'estudiante123', '955112233', 'UNMSM', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-003"]'::jsonb, 'Semestral', 0.00),
-('USR-006', 'Quispe Alarcón', 'Valeria Sofía', '76543210', '2004-10-14', 'v.quispe@academia.edu.pe', 'estudiante123', '955223344', 'UNI', 'Ingeniería de Sistemas', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-004", "CRS-005"]'::jsonb, 'Semestral', 0.00),
-('USR-007', 'Gómez Pérez', 'Lucía Fernanda', '73214569', '2005-05-30', 'l.gomez@academia.edu.pe', 'estudiante123', '955334455', 'PUCP', 'Derecho', 'Humanidades y Letras', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-007", "CRS-008"]'::jsonb, 'Semestral', 0.00),
-('USR-010', 'Flores Mendoza', 'Diego', '75849302', '2004-08-22', 'd.flores@academia.edu.pe', 'estudiante123', '955445566', 'UNI', 'Ingeniería Industrial', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-006"]'::jsonb, 'Intensivo', 0.00),
-('USR-011', 'Morales Ruiz', 'Elena', '71928374', '2005-01-09', 'e.morales@academia.edu.pe', 'estudiante123', '955556677', 'UNMSM', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-003", "CRS-007"]'::jsonb, 'Semestral', 0.00)
+('USR-001', 'Morales Salazar', 'Roberto Carlos', '41235678', '1985-04-12', 'admin@gmail.com', '987654321', 'Dirección Académica', 'Gestión Institucional', 'admin', 'Activo', '[]'::jsonb, '[]'::jsonb, 'Semestral', 4500.00),
+('USR-002', 'Herrera Villanueva', 'Carmen Rosa', '45678912', '1988-06-20', 'c.herrera@academia.edu.pe', '987111222', 'Cátedra de Álgebra y Aritmética', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-001", "CRS-006"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
+('USR-003', 'Paredes Ruiz', 'Miguel Ángel', '48923104', '1990-09-15', 'm.paredes@academia.edu.pe', '987222333', 'Cátedra de Física e Historia', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-002", "CRS-008"]'::jsonb, '[]'::jsonb, 'Semestral', 3000.00),
+('USR-004', 'Torres Meléndez', 'Elena Sofía', '43219876', '1987-03-25', 'e.torres@academia.edu.pe', '987333444', 'Cátedra de Biología y Anatomía', 'Ciencias Médicas', 'docente', 'Activo', '["CRS-003", "CRS-007"]'::jsonb, '[]'::jsonb, 'Semestral', 3500.00),
+('USR-008', 'Torres Sánchez', 'Jesús Héctor', '47891234', '1992-11-08', 'j.torres@academia.edu.pe', '987444555', 'Cátedra de Programación (Python)', 'Programación', 'docente', 'Activo', '["CRS-004"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
+('USR-009', 'Pérez Ramos', 'Juan Gabriel', '46781290', '1989-07-19', 'j.perez@academia.edu.pe', '987555666', 'Cátedra de Matemática Avanzada', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-005"]'::jsonb, '[]'::jsonb, 'Semestral', 3400.00),
+('USR-005', 'Flores Mendoza', 'Juan Carlos', '74839201', '2005-02-18', 'estudiante@gmail.com', '955112233', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-003"]'::jsonb, 'Semestral', 0.00),
+('USR-006', 'Quispe Alarcón', 'Valeria Sofía', '76543210', '2004-10-14', 'v.quispe@academia.edu.pe', '955223344', 'Ingeniería de Sistemas', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-004", "CRS-005"]'::jsonb, 'Semestral', 0.00),
+('USR-007', 'Gómez Pérez', 'Lucía Fernanda', '73214569', '2005-05-30', 'l.gomez@academia.edu.pe', '955334455', 'Derecho', 'Humanidades y Letras', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-007", "CRS-008"]'::jsonb, 'Semestral', 0.00),
+('USR-010', 'Flores Mendoza', 'Diego', '75849302', '2004-08-22', 'd.flores@academia.edu.pe', '955445566', 'Ingeniería Industrial', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-006"]'::jsonb, 'Intensivo', 0.00),
+('USR-011', 'Morales Ruiz', 'Elena', '71928374', '2005-01-09', 'e.morales@academia.edu.pe', '955556677', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-003", "CRS-007"]'::jsonb, 'Semestral', 0.00)
 ON CONFLICT (id) DO UPDATE SET
   apellidos = EXCLUDED.apellidos, nombres = EXCLUDED.nombres, dni = EXCLUDED.dni, "fechaNacimiento" = EXCLUDED."fechaNacimiento",
-  correo = EXCLUDED.correo, password = EXCLUDED.password, celular = EXCLUDED.celular, universidad = EXCLUDED.universidad,
+  correo = EXCLUDED.correo, celular = EXCLUDED.celular,
   "carreraObjetivo" = EXCLUDED."carreraObjetivo", "areaAcademica" = EXCLUDED."areaAcademica", rol = EXCLUDED.rol,
   estado = EXCLUDED.estado, "cursosAsignados" = EXCLUDED."cursosAsignados", "cursosInscritos" = EXCLUDED."cursosInscritos",
   ciclovirtual = EXCLUDED.ciclovirtual, salario = EXCLUDED.salario;
@@ -301,45 +384,65 @@ INSERT INTO configuracion (
   'En Curso', 50.00, 15, 2.00
 ) ON CONFLICT (id) DO NOTHING;
 
--- H. TAREAS ACADÉMICAS (V2)
-CREATE TABLE IF NOT EXISTS tareas (
-  id TEXT PRIMARY KEY,
-  curso_id TEXT NOT NULL,
-  curso TEXT NOT NULL,
-  tipo TEXT NOT NULL DEFAULT 'Tarea Calificada',
-  titulo TEXT NOT NULL,
-  descripcion TEXT,
-  fecha_limite TEXT NOT NULL,
-  puntos TEXT DEFAULT '20 pts',
-  docente_id TEXT,
-  docente TEXT NOT NULL,
-  estado TEXT DEFAULT 'Por entregar',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- H. ÁREAS ACADÉMICAS
+INSERT INTO areas_academicas (id, codigo, nombre, descripcion, color, estado) VALUES
+('AREA-EXA', 'CIENCIAS-EXACTAS', 'Ciencias Exactas e Ingenierías', 'Matemáticas, Física, Química, Computación e ingenierías afines', '#2563EB', 'Activo'),
+('AREA-MED', 'CIENCIAS-MEDICAS', 'Ciencias Médicas y de la Salud', 'Medicina Humana, Enfermería, Odontología, Biología y afines', '#DC2626', 'Activo'),
+('AREA-HUM', 'HUMANIDADES', 'Humanidades y Ciencias Sociales', 'Derecho, Literatura, Historia, Filosofía y afines', '#7C3AED', 'Activo'),
+('AREA-GES', 'GESTION', 'Gestión Institucional y Empresarial', 'Administración, Economía, Contabilidad y Dirección', '#059669', 'Activo')
+ON CONFLICT (id) DO UPDATE SET
+  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion, color = EXCLUDED.color, estado = EXCLUDED.estado;
 
-INSERT INTO tareas (id, curso_id, curso, tipo, titulo, descripcion, fecha_limite, puntos, docente_id, docente, estado)
-VALUES
-('TSK-001', 'CRS-001', 'Álgebra y Funciones', 'Tarea Calificada', 'Práctica N° 4: Funciones Cuadráticas y Polinomios', 'Desarrollar los 10 ejercicios pares de la separata teórica N° 4 en formato PDF manuscrito o digital.', 'Mañana, 11:59 PM', '20 pts', 'USR-002', 'Prof. Carmen Rosa Herrera', 'Por entregar'),
-('TSK-002', 'CRS-002', 'Física Fundamental', 'Guía de Ejercicios', 'Taller N° 3: Cinemática y Leyes de Newton', 'Completar la resolución de los problemas de dinámica lineal con sus diagramas de cuerpo libre.', 'Viernes, 11:59 PM', '20 pts', 'USR-003', 'Prof. Miguel Ángel Paredes', 'Por entregar'),
-('TSK-003', 'CRS-003', 'Biología y Anatomía', 'Cuestionario Virtual', 'Autoevaluación: Genética y Sistema Nervioso', 'Cuestionario de 20 preguntas con retroalimentación inmediata sobre bases celulares y herencia genética.', 'Entregado ayer', '20 pts', 'USR-004', 'Dra. Elena Sofía Torres', 'Entregado'),
-('TSK-004', 'SIM-01', 'Academia Pre (General)', 'Simulacro Tipo Admisión', 'Simulacro General de Ciencias y Humanidades', 'Evaluación cronometrada de 3 horas simulando el examen de admisión oficial con ranking en vivo.', 'Domingo, 02:00 PM', '100 preguntas', 'USR-001', 'Coordinación Académica', 'Por entregar')
-ON CONFLICT (id) DO NOTHING;
+-- I. CARRERAS PROFESIONALES
+INSERT INTO carreras (id, codigo, nombre, area_id, descripcion, duracion_anios, grado_academico, universidades_objetivo, estado) VALUES
+('CAR-001', 'MED-HUM', 'Medicina Humana', 'AREA-MED', 'Programa de formación médica y ciencias de la salud con alto puntaje de admisión.', 7, 'Médico Cirujano', '["UNMSM", "UPCH", "UNFV"]'::jsonb, 'Activo'),
+('CAR-002', 'ING-SIS', 'Ingeniería de Sistemas', 'AREA-EXA', 'Ingeniería orientada al desarrollo de software, cloud computing y ciencias computacionales.', 5, 'Ingeniero de Sistemas', '["UNI", "UNMSM", "PUCP"]'::jsonb, 'Activo'),
+('CAR-003', 'DER-POL', 'Derecho y Ciencias Políticas', 'AREA-HUM', 'Ciencias jurídicas, legislación pública y litigio civil y penal.', 6, 'Abogado', '["PUCP", "UNMSM", "UNIFE"]'::jsonb, 'Activo'),
+('CAR-004', 'ING-IND', 'Ingeniería Industrial', 'AREA-EXA', 'Optimización de procesos productivos, cadena de suministro y dirección de operaciones.', 5, 'Ingeniero Industrial', '["UNI", "UNMSM", "ULIMA"]'::jsonb, 'Activo')
+ON CONFLICT (id) DO UPDATE SET
+  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, area_id = EXCLUDED.area_id, descripcion = EXCLUDED.descripcion,
+  duracion_anios = EXCLUDED.duracion_anios, grado_academico = EXCLUDED.grado_academico,
+  universidades_objetivo = EXCLUDED.universidades_objetivo, estado = EXCLUDED.estado;
 
--- I. ANUNCIOS Y COMUNICADOS ACADÉMICOS (V2)
-CREATE TABLE IF NOT EXISTS anuncios (
-  id TEXT PRIMARY KEY,
-  curso_id TEXT NOT NULL,
-  curso TEXT NOT NULL,
-  titulo TEXT NOT NULL,
-  contenido TEXT NOT NULL,
-  prioridad TEXT DEFAULT 'Normal',
-  docente_id TEXT,
-  docente TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- J. TIPOS DE CICLO (MODALIDADES)
+INSERT INTO tipos_ciclo (id, codigo, nombre, duracion_semanas, modalidad, descripcion, estado) VALUES
+('TCIC-SEM', 'SEMESTRAL', 'Semestral', 24, 'Virtual', 'Preparación semestral intensiva con desarrollo temático completo.', 'Activo'),
+('TCIC-ANU', 'ANUAL', 'Anual', 44, 'Virtual', 'Preparación anual integral desde nivel cero hasta avanzado.', 'Activo'),
+('TCIC-INT', 'INTENSIVO', 'Intensivo', 8, 'Virtual', 'Ciclo rápido y condensado de verano o repaso preuniversitario.', 'Activo'),
+('TCIC-REP', 'REPASO', 'Repaso / Super Intensivo', 6, 'Virtual', 'Resolución masiva de exámenes tipo admisión y simulacros.', 'Activo'),
+('TCIC-ESC', 'ESCOLAR', 'Reforzamiento Escolar', 12, 'Virtual', 'Nivelación y fortalecimiento para estudiantes de 4to y 5to de secundaria.', 'Activo')
+ON CONFLICT (id) DO UPDATE SET
+  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, duracion_semanas = EXCLUDED.duracion_semanas,
+  modalidad = EXCLUDED.modalidad, descripcion = EXCLUDED.descripcion, estado = EXCLUDED.estado;
 
-INSERT INTO anuncios (id, curso_id, curso, titulo, contenido, prioridad, docente_id, docente)
-VALUES
-('ANN-001', 'CRS-001', 'Álgebra y Funciones', 'Material adicional: Fórmulas de Factorización y Radicación', 'Estimados alumnos, he subido a la biblioteca digital el formulario resumido para resolver con mayor rapidez los problemas del simulacro de este fin de semana. ¡Aprovéchenlo!', 'Importante', 'USR-002', 'Prof. Carmen Rosa Herrera'),
-('ANN-002', 'CRS-002', 'Física Fundamental', 'Repaso extraordinario de Estática y Rozamiento', 'Este jueves a las 06:00 PM tendremos una sesión voluntaria de resolución de dudas en Google Meet antes de la práctica calificada.', 'Normal', 'USR-003', 'Prof. Miguel Ángel Paredes')
-ON CONFLICT (id) DO NOTHING;
+-- K. CICLOS ACADÉMICOS (PERIODOS VIGENTES)
+INSERT INTO ciclos_academicos (id, codigo, nombre, tipo_ciclo_id, anio, periodo, fecha_inicio, fecha_fin, costo_matricula, costo_pension_mensual, costo_total_contado, es_vigente, estado) VALUES
+('CIC-2026-SEM-1', '2026-SEM-I', 'Semestral 2026-I', 'TCIC-SEM', 2026, 'I', '2026-01-15', '2026-07-31', 100.00, 300.00, 1800.00, true, 'En Curso'),
+('CIC-2026-ANU', '2026-ANU', 'Anual 2026', 'TCIC-ANU', 2026, 'Anual', '2026-03-01', '2026-12-20', 120.00, 280.00, 2500.00, false, 'En Curso'),
+('CIC-2026-INT-1', '2026-INT-I', 'Intensivo 2026-I', 'TCIC-INT', 2026, 'Verano', '2026-01-05', '2026-02-28', 80.00, 400.00, 850.00, false, 'Finalizado'),
+('CIC-2026-SEM-2', '2026-SEM-II', 'Semestral 2026-II', 'TCIC-SEM', 2026, 'II', '2026-08-15', '2026-12-31', 100.00, 300.00, 1800.00, false, 'Planificado')
+ON CONFLICT (id) DO UPDATE SET
+  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, tipo_ciclo_id = EXCLUDED.tipo_ciclo_id,
+  anio = EXCLUDED.anio, periodo = EXCLUDED.periodo, fecha_inicio = EXCLUDED.fecha_inicio, fecha_fin = EXCLUDED.fecha_fin,
+  costo_matricula = EXCLUDED.costo_matricula, costo_pension_mensual = EXCLUDED.costo_pension_mensual,
+  costo_total_contado = EXCLUDED.costo_total_contado, es_vigente = EXCLUDED.es_vigente, estado = EXCLUDED.estado;
+
+-- L. TURNOS
+INSERT INTO turnos (id, codigo, nombre, hora_inicio, hora_fin, estado) VALUES
+('TUR-MAN', 'MANANA', 'Mañana', '08:00', '13:00', 'Activo'),
+('TUR-TAR', 'TARDE', 'Tarde', '14:00', '19:00', 'Activo'),
+('TUR-NOC', 'NOCHE', 'Noche', '18:00', '22:00', 'Activo')
+ON CONFLICT (id) DO UPDATE SET
+  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, hora_inicio = EXCLUDED.hora_inicio,
+  hora_fin = EXCLUDED.hora_fin, estado = EXCLUDED.estado;
+
+-- M. OFERTA DE VACANTES POR CICLO
+INSERT INTO ciclo_carreras (id, ciclo_id, carrera_id, vacantes_totales, vacantes_ocupadas, estado) VALUES
+('OFE-2026-SEM1-MED', 'CIC-2026-SEM-1', 'CAR-001', 50, 42, 'Disponible'),
+('OFE-2026-SEM1-SIS', 'CIC-2026-SEM-1', 'CAR-002', 45, 38, 'Disponible'),
+('OFE-2026-SEM1-DER', 'CIC-2026-SEM-1', 'CAR-003', 40, 29, 'Disponible'),
+('OFE-2026-SEM1-IND', 'CIC-2026-SEM-1', 'CAR-004', 35, 20, 'Disponible')
+ON CONFLICT (id) DO UPDATE SET
+  ciclo_id = EXCLUDED.ciclo_id, carrera_id = EXCLUDED.carrera_id, vacantes_totales = EXCLUDED.vacantes_totales,
+  vacantes_ocupadas = EXCLUDED.vacantes_ocupadas, estado = EXCLUDED.estado;
+

@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
-from database import load_db
+from database import load_db, get_pg_connection
 from auth import require_role
 
 router = APIRouter(prefix="/monitoreo", tags=["Monitoreo y Reglas"])
@@ -45,8 +45,23 @@ def verificar_cruce_virtual(nuevo_curso: dict, cursos_existentes: list):
 
 @router.post("/validar-curso")
 def evaluar_nuevo_curso(curso: dict, current_user: dict = Depends(require_role(["admin"]))):
-    db = load_db()
-    cursos_existentes = db.get("courses", [])
+    cursos_existentes = []
+    conn = get_pg_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute('SELECT id, asignatura, "docenteId", dias, "horaInicio", "horaFin" FROM courses')
+                columns = [col[0] for col in cur.description]
+                cursos_existentes = [dict(zip(columns, row)) for row in cur.fetchall()]
+        except Exception as e:
+            print(f"[Monitoreo] Error al consultar cursos en PostgreSQL: {e}")
+            cursos_existentes = []
+        finally:
+            conn.close()
+
+    if not cursos_existentes:
+        db = load_db()
+        cursos_existentes = db.get("courses", [])
     
     resultado = verificar_cruce_virtual(curso, cursos_existentes)
     
