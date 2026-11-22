@@ -104,10 +104,10 @@ def test_crear_curso_prohibido_para_estudiante():
 def test_motor_reglas_cruce_docente():
     """
     Valida que el motor de reglas detecte el cruce si se intenta asignar
-    un horario superpuesto para el mismo docente (Dra. Elena, USR-004, Lunes de 15:00 a 17:00).
+    un horario superpuesto para el mismo docente (Dra. Carmen Rosa Herrera, USR-002, Lunes de 15:00 a 17:00).
     """
     curso_con_cruce = {
-        "docenteId": "USR-004",
+        "docenteId": "USR-002",
         "dias": ["Lunes"],
         "horaInicio": "15:30",
         "horaFin": "16:30"
@@ -407,6 +407,7 @@ def test_crear_usuario_guarda_perfil_sin_password_ni_universidad(monkeypatch):
     class FakeCursor:
         description = None
         row = None
+        rows = []
         insert_query = ""
         insert_values = ()
 
@@ -417,12 +418,14 @@ def test_crear_usuario_guarda_perfil_sin_password_ni_universidad(monkeypatch):
             return False
 
         def execute(self, query, values=()):
-            if "SELECT id FROM users" in query:
+            if "WHERE correo = %s OR dni = %s OR auth_user_id" in query:
                 self.description = [("id",)]
                 self.row = None
-            elif "SELECT COUNT(*) FROM users" in query:
-                self.description = [("count",)]
-                self.row = (0,)
+                self.rows = []
+            elif "SELECT COUNT(*) FROM users" in query or "WHERE id ~" in query:
+                self.description = [("id",)]
+                self.row = ("USR-100",)
+                self.rows = [("USR-100",)]
             elif "INSERT INTO users" in query:
                 self.insert_query = query
                 self.insert_values = values
@@ -457,11 +460,19 @@ def test_crear_usuario_guarda_perfil_sin_password_ni_universidad(monkeypatch):
                     "docente",
                     "Activo",
                 )
+                self.rows = [self.row]
+            elif "UPDATE users" in query:
+                self.description = None
+                self.row = None
+                self.rows = []
             else:
                 raise AssertionError(f"Unexpected SQL in test: {query}")
 
         def fetchone(self):
             return self.row
+
+        def fetchall(self):
+            return getattr(self, "rows", [self.row] if self.row else [])
 
     class FakeConnection:
         def __init__(self):
@@ -589,8 +600,8 @@ def test_validar_curso_excluye_mismo_id_en_edicion():
     curso_editado = {
         "id": "CRS-003",
         "asignatura": "Biología y Anatomía",
-        "docenteId": "USR-004",
-        "docente": "Elena Sofía Torres Meléndez",
+        "docenteId": "USR-002",
+        "docente": "Carmen Rosa Herrera Villanueva",
         "dias": ["Lunes", "Viernes"],
         "horaInicio": "15:00",
         "horaFin": "17:00",
@@ -606,7 +617,7 @@ def test_validar_curso_permite_horarios_contiguos():
     curso_contiguo = {
         "id": "CRS-NEW-CONT",
         "asignatura": "Anatomía II",
-        "docenteId": "USR-004",
+        "docenteId": "USR-002",
         "dias": ["Lunes"],
         "horaInicio": "17:00",
         "horaFin": "19:00",
@@ -638,6 +649,184 @@ def test_incidencias_acepta_aliases_lowercase_y_camelcase():
     assert inc["cursoId"] == "CRS-002"
     assert inc["cursoid"] == "CRS-002"
     assert inc["docentePropuesto"] == "Juan Gabriel Pérez Ramos"
+
+
+def test_endpoint_actividades_listar_tareas():
+    """Valida que el endpoint /tareas/ retorne una lista de tareas."""
+    response = client.get("/tareas/")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_endpoint_actividades_listar_anuncios():
+    """Valida que el endpoint /anuncios/ retorne una lista de comunicados."""
+    response = client.get("/anuncios/")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_endpoint_actividades_crear_tarea_como_docente():
+    """Valida que un docente pueda crear una tarea académica (201 Created)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "tipo": "Tarea Calificada",
+        "titulo": "Práctica N° 1: POO y Herencia",
+        "descripcion": "Desarrollar clases en Java.",
+        "fechaLimite": "Viernes, 11:59 PM",
+        "puntos": "20 pts",
+        "docente": "Prof. Pedro Chavez"
+    }
+    response = client.post("/tareas/", headers=DOCENTE_HEADERS, json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["titulo"] == "Práctica N° 1: POO y Herencia"
+
+
+def test_endpoint_actividades_crear_tarea_como_estudiante_rechazado():
+    """Valida que un estudiante no pueda crear tareas (403 Forbidden)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "titulo": "Intento no autorizado",
+        "fechaLimite": "Mañana",
+        "docente": "Estudiante Test"
+    }
+    response = client.post("/tareas/", headers=ESTUDIANTE_HEADERS, json=payload)
+    assert response.status_code == 403
+
+
+def test_endpoint_actividades_crear_anuncio_como_docente():
+    """Valida que un docente pueda publicar un anuncio (201 Created)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "titulo": "Material de clase disponible",
+        "contenido": "Se subieron las diapositivas de POO.",
+        "prioridad": "Alta",
+        "docente": "Prof. Pedro Chavez"
+    }
+    response = client.post("/anuncios/", headers=DOCENTE_HEADERS, json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["titulo"] == "Material de clase disponible"
+
+
+def test_endpoint_actividades_crear_anuncio_como_estudiante_rechazado():
+    """Valida que un estudiante no pueda publicar anuncios (403 Forbidden)."""
+    payload = {
+        "cursoId": "CRS-7474",
+        "curso": "Programacion con Java",
+        "titulo": "Aviso ilegal",
+        "contenido": "Sin permisos",
+        "docente": "Estudiante Test"
+    }
+    response = client.post("/anuncios/", headers=ESTUDIANTE_HEADERS, json=payload)
+    assert response.status_code == 403
+
+
+# --- PRUEBAS DE CATÁLOGO ACADÉMICO (APORTACIONES COMPAÑEROS - SOFIA) ---
+
+def test_endpoint_academicos_listar_areas():
+    """Valida que se listen las áreas académicas registradas."""
+    response = client.get("/academicos/areas")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 4
+    codigos = [a.get("codigo") for a in data]
+    assert "CIENCIAS-EXACTAS" in codigos
+    assert "HUMANIDADES" in codigos
+
+
+def test_endpoint_academicos_listar_carreras():
+    """Valida que se listen las carreras universitarias objetivo."""
+    response = client.get("/academicos/carreras")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 4
+    nombres = [c.get("nombre") for c in data]
+    assert "Medicina Humana" in nombres
+    assert "Ingeniería de Sistemas" in nombres
+
+
+def test_endpoint_academicos_listar_ciclos_y_turnos():
+    """Valida los endpoints de tipos de ciclo, ciclos académicos y turnos."""
+    res_tipos = client.get("/academicos/tipos-ciclo")
+    assert res_tipos.status_code == 200
+    assert len(res_tipos.json()) >= 4
+
+    res_ciclos = client.get("/academicos/ciclos")
+    assert res_ciclos.status_code == 200
+    assert len(res_ciclos.json()) >= 4
+
+    res_turnos = client.get("/academicos/turnos")
+    assert res_turnos.status_code == 200
+    assert len(res_turnos.json()) >= 3
+
+
+def test_endpoint_academicos_oferta_consolidada():
+    """Valida el endpoint de oferta académica que vincula ciclos y carreras."""
+    response = client.get("/academicos/oferta")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 4
+    assert "carrera_id" in data[0] or "ciclo_id" in data[0]
+
+
+def test_endpoint_academicos_crear_area_prohibido_estudiante():
+    """Valida que un estudiante no pueda crear áreas académicas (403 Forbidden)."""
+    payload = {
+        "codigo": "AREA-TEST",
+        "nombre": "Área no autorizada",
+        "descripcion": "Intento de registro sin rol admin"
+    }
+    response = client.post("/academicos/areas", headers=ESTUDIANTE_HEADERS, json=payload)
+    assert response.status_code == 403
+
+
+# --- PRUEBAS DE MENSAJERÍA Y CONSULTAS ACADÉMICAS BIDIRECCIONALES ---
+
+def test_endpoint_mensajes_listar():
+    """Valida que se listen las consultas académicas."""
+    response = client.get("/mensajes/")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 2
+
+
+def test_endpoint_mensajes_crear_y_responder():
+    """Valida el ciclo completo: estudiante consulta y docente responde."""
+    nuevo_msg = {
+        "id": "MSG-TEST-UNIT-01",
+        "estudianteId": "USR-108",
+        "estudianteNombre": "Esteban Torres",
+        "estudianteCorreo": "esteban@gmail.com",
+        "estudianteCarrera": "Medicina Humana (UNMSM)",
+        "docenteId": "USR-107",
+        "docenteNombre": "Prof. Pedro Chavez",
+        "cursoId": "CRS-002",
+        "curso": "Física Fundamental",
+        "mensaje": "¿El examen incluirá temas de estática vectorial?"
+    }
+    res_crear = client.post("/mensajes/", json=nuevo_msg)
+    assert res_crear.status_code == 201
+    creado = res_crear.json()
+    assert creado["id"] == "MSG-TEST-UNIT-01"
+    assert creado["estado"] == "Pendiente"
+
+    # Docente responde
+    respuesta_payload = {
+        "respuesta": "Sí Esteban, vendrán 2 problemas de equilibrio de fuerzas.",
+        "docenteNombre": "Pedro Martlon Chavez Quispe"
+    }
+    res_resp = client.patch("/mensajes/MSG-TEST-UNIT-01/respuesta", json=respuesta_payload)
+    assert res_resp.status_code == 200
+    assert res_resp.json()["estado"] == "Respondido"
+
 
 
 

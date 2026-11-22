@@ -362,6 +362,9 @@ def login(form_data: UserLogin):
         "token_type": "bearer",
         "role": user["rol"],
         "name": f"{user['nombres']} {user['apellidos']}",
+        "userId": user["id"],
+        "id": user["id"],
+        "email": user.get("correo"),
     }
 
 
@@ -485,10 +488,21 @@ def crear_usuario(
                     detail="Ya existe un perfil con ese correo, documento o cuenta de Auth.",
                 )
 
-            cur.execute("SELECT COUNT(*) FROM users;")
-            count_row = fetch_one_as_dict(cur)
-            generated_id = user_dict.get("id") or f"USR-{(count_row['count'] if count_row else 0) + 101:03d}"
-            user_dict["id"] = generated_id
+            if not user_dict.get("id"):
+                cur.execute("SELECT id FROM users WHERE id ~ '^USR-[0-9]+$';")
+                existing_ids = fetch_all_as_dict(cur)
+                existing_numbers = set()
+                for r in existing_ids:
+                    try:
+                        existing_numbers.add(int(str(r.get("id", "")).split("-")[1]))
+                    except (ValueError, IndexError):
+                        pass
+
+                next_candidate = 101
+                while next_candidate in existing_numbers:
+                    next_candidate += 1
+
+                user_dict["id"] = f"USR-{next_candidate:03d}"
 
             cur.execute(
                 """
@@ -567,6 +581,7 @@ def crear_usuario(
     except Exception as exc:
         conn.rollback()
         err_msg = str(exc)
+        print(f"[Usuarios] Error guardando perfil: {err_msg}")
         if "check_users_dni" in err_msg:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -675,15 +690,45 @@ def eliminar_usuario(identificador: str):
     if conn:
         try:
             with conn.cursor() as cur:
+                # 1. Consultar id, correo y auth_user_id antes de eliminar
                 cur.execute(
-                    "DELETE FROM users WHERE id = %s OR correo = %s RETURNING id;",
+                    "SELECT id, correo, auth_user_id FROM users WHERE id = %s OR correo = %s;",
                     (identificador, identificador),
                 )
-                deleted = cur.fetchone()
-                conn.commit()
-                if not deleted:
+                row = fetch_one_as_dict(cur)
+                if not row:
                     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
-                return {"mensaje": "Usuario eliminado correctamente", "id": deleted[0]}
+
+                user_id = row["id"]
+                user_email = row["correo"]
+                auth_id = row.get("auth_user_id")
+
+                # 2. Eliminar de public.users
+                cur.execute("DELETE FROM users WHERE id = %s;", (user_id,))
+
+                # 3. Eliminar de auth.users para permitir recrear el usuario limpiamente
+                if auth_id:
+                    try:
+                        cur.execute("DELETE FROM auth.users WHERE id = %s::uuid;", (auth_id,))
+                    except Exception as e_auth:
+                        print(f"[Eliminar Usuario] No se pudo eliminar de auth.users por id: {e_auth}")
+                elif user_email:
+                    try:
+                        cur.execute("DELETE FROM auth.users WHERE email = %s;", (user_email,))
+                    except Exception as e_auth:
+                        print(f"[Eliminar Usuario] No se pudo eliminar de auth.users por email: {e_auth}")
+
+                conn.commit()
+                return {
+                    "mensaje": f"Usuario {user_id} eliminado correctamente de la base de datos y de Auth",
+                    "id": user_id,
+                }
+        except HTTPException:
+            raise
+        except Exception as e:
+            conn.rollback()
+            print(f"[Eliminar Usuario] Error en Postgres: {e}")
+            raise HTTPException(status_code=500, detail="No se pudo eliminar el usuario en la base de datos.")
         finally:
             conn.close()
 

@@ -11,7 +11,12 @@ router = APIRouter(prefix="/monitoreo", tags=["Monitoreo y Reglas"])
 def _clean_teacher_name(val: Optional[str]) -> str:
     if not val:
         return ""
-    cleaned = re.sub(r"^(prof\.|profesora|profesor|dra\.|dr\.|ing\.|lic\.|mg\.)\s*", "", str(val).strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"^(prof\.|profesora|profesor|dra\.|dr\.|ing\.|lic\.|mg\.)\s*",
+        "",
+        str(val).strip(),
+        flags=re.IGNORECASE,
+    )
     return cleaned.strip().lower()
 
 
@@ -152,7 +157,7 @@ def verificar_cruce_virtual(nuevo_curso: dict, cursos_existentes: list) -> Dict[
 
 
 @router.post("/validar-curso")
-def evaluar_nuevo_curso(curso: dict, current_user: dict = Depends(require_role(["admin"]))):
+def evaluar_nuevo_curso(curso: dict, current_user: dict = Depends(require_role(["admin", "docente"]))):
     cursos_existentes = obtener_cursos_para_validacion()
 
     try:

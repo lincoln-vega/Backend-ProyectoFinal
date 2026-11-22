@@ -22,6 +22,19 @@ pip install pytest httpx
 pytest -v
 ```
 
+### 👥 Cuentas de Acceso y Credenciales de Prueba (InsForge Auth)
+
+Las cuentas oficiales registradas y sincronizadas entre InsForge Auth y la base de datos PostgreSQL son:
+
+| Rol | Correo Electrónico | Contraseña | Usuario Registrado | Carrera / Asignaturas | Panel de Redirección |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@gmail.com` | `admin123` | Roberto Carlos Morales Salazar | Gestión Institucional | `/admin/usuarios` |
+| **Docente (Titular)** | `chavez@gmail.com` | `Chavez123` | Prof. Pedro Chavez | Física Fundamental, Trigonometría, Historia | `/docente/panel` |
+| **Docente** | `vicky@gmail.com` | `vicky123` | Prof. Victoria Raggi | Álgebra y Funciones, Química | `/docente/panel` |
+| **Estudiante 1** | `esteban@gmail.com` | `Esteban123` | Esteban Torres | **Medicina Humana** (Física, Trigonometría) | `/estudiante/panel` |
+| **Estudiante 2** | `estudiante@gmail.com` | `estudiante123` | Juan Carlos Flores Mendoza | **Ingeniería de Sistemas** (Álgebra, Física) | `/estudiante/panel` |
+| **Estudiante 3** | `anapaula@gmail.com` | `AnaPaula123!` | Ana Paula Vargas Chavez | **Derecho y Ciencias Políticas** (Historia) | `/estudiante/panel` |
+
 ### Registro de usuarios e InsForge Auth
 
 Las cuentas se crean en InsForge Auth. Solo un administrador autenticado puede
