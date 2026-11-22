@@ -99,7 +99,7 @@ def crear_area(area: AreaAcademicaCreate):
                 return {"mensaje": "Área académica creada exitosamente", "area": nuevo}
         except Exception as e:
             conn.rollback()
-            raise HTTPException(status_code=400, detail=f"Error creando área: {str(e)}")
+            raise HTTPException(status_code=400, detail="No se pudo registrar el área académica. Verifique que el ID o código no estén duplicados.")
         finally:
             conn.close()
 
@@ -171,7 +171,7 @@ def crear_carrera(carrera: CarreraCreate):
                 return {"mensaje": "Carrera registrada exitosamente", "carrera": nuevo}
         except Exception as e:
             conn.rollback()
-            raise HTTPException(status_code=400, detail=f"Error creando carrera: {str(e)}")
+            raise HTTPException(status_code=400, detail="No se pudo registrar la carrera profesional. Verifique que el ID, código y área asociada sean válidos.")
         finally:
             conn.close()
 
@@ -222,7 +222,7 @@ def crear_tipo_ciclo(tipo: TipoCicloCreate):
                 return {"mensaje": "Tipo de ciclo creado exitosamente", "tipo_ciclo": nuevo}
         except Exception as e:
             conn.rollback()
-            raise HTTPException(status_code=400, detail=f"Error creando tipo de ciclo: {str(e)}")
+            raise HTTPException(status_code=400, detail="No se pudo registrar el tipo de ciclo. Verifique que el ID o código no estén duplicados.")
         finally:
             conn.close()
 
@@ -300,7 +300,7 @@ def crear_ciclo(ciclo: CicloAcademicoCreate):
                 return {"mensaje": "Ciclo académico registrado exitosamente", "ciclo": nuevo}
         except Exception as e:
             conn.rollback()
-            raise HTTPException(status_code=400, detail=f"Error creando ciclo: {str(e)}")
+            raise HTTPException(status_code=400, detail="No se pudo registrar el ciclo académico. Verifique los datos y fechas ingresadas.")
         finally:
             conn.close()
 
@@ -351,7 +351,7 @@ def crear_turno(turno: TurnoCreate):
                 return {"mensaje": "Turno creado exitosamente", "turno": nuevo}
         except Exception as e:
             conn.rollback()
-            raise HTTPException(status_code=400, detail=f"Error creando turno: {str(e)}")
+            raise HTTPException(status_code=400, detail="No se pudo registrar el turno institucional. Verifique que el ID o código no estén duplicados.")
         finally:
             conn.close()
 

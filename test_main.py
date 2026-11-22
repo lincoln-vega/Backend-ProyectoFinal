@@ -542,3 +542,102 @@ def test_endpoint_validar_datos_carnet_extranjeria_invalido():
     assert "dni" in response.json()["detail"]["errores"]
 
 
+# --- PRUEBAS DE AUDITORÍA: ALINEACIÓN FRONTEND / INSFORGE / RBAC ---
+
+def test_usuarios_get_incluye_cursos_y_normaliza_listas():
+    """Verifica que GET /usuarios/ incluya cursosInscritos, cursosAsignados, especialidad, auth_user_id y cicloVirtual."""
+    response = client.get("/usuarios/", headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    users = response.json()
+    assert len(users) > 0
+    first = users[0]
+    for field in (
+        "id", "nombres", "apellidos", "tipoDocumento", "dni", "fechaNacimiento",
+        "correo", "celular", "carreraObjetivo", "areaAcademica", "rol", "estado",
+        "ciclovirtual", "cicloVirtual", "salario", "especialidad",
+        "cursosAsignados", "cursosInscritos", "auth_user_id", "created_at"
+    ):
+        assert field in first, f"Falta el campo {field} en UsuarioResponse"
+    assert isinstance(first["cursosAsignados"], list)
+    assert isinstance(first["cursosInscritos"], list)
+
+
+def test_estudiante_no_ve_salario_de_docentes():
+    """Verifica que si un Estudiante consulta /usuarios/, el campo financiero salario se oculte (None)."""
+    response = client.get("/usuarios/", headers=ESTUDIANTE_HEADERS)
+    assert response.status_code == 200
+    users = response.json()
+    assert all(u.get("salario") is None for u in users)
+
+
+def test_parse_course_list_normaliza_formatos_postgres():
+    """Verifica que UsuarioResponse normalice cadenas CSV, literales de array Postgres y JSON arrays."""
+    u = usuarios_router.UsuarioResponse.model_validate({
+        "id": "USR-999",
+        "nombres": "Ana",
+        "apellidos": "Test",
+        "correo": "ana@test.com",
+        "cursosInscritos": "{CRS-001,CRS-002}",
+        "cursosAsignados": "CRS-003, CRS-004",
+    })
+    assert u.cursosInscritos == ["CRS-001", "CRS-002"]
+    assert u.cursosAsignados == ["CRS-003", "CRS-004"]
+
+
+def test_validar_curso_excluye_mismo_id_en_edicion():
+    """Verifica que editar un curso existente (enviando su propio id) no genere falso positivo consigo mismo."""
+    curso_editado = {
+        "id": "CRS-003",
+        "asignatura": "Biología y Anatomía",
+        "docenteId": "USR-004",
+        "docente": "Elena Sofía Torres Meléndez",
+        "dias": ["Lunes", "Viernes"],
+        "horaInicio": "15:00",
+        "horaFin": "17:00",
+        "estado": "Activo",
+    }
+    response = client.post("/monitoreo/validar-curso", json=curso_editado, headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    assert response.json()["valido"] is True
+
+
+def test_validar_curso_permite_horarios_contiguos():
+    """Verifica que clases contiguas (ej. 17:00-19:00 después de 15:00-17:00) no se marquen como cruce."""
+    curso_contiguo = {
+        "id": "CRS-NEW-CONT",
+        "asignatura": "Anatomía II",
+        "docenteId": "USR-004",
+        "dias": ["Lunes"],
+        "horaInicio": "17:00",
+        "horaFin": "19:00",
+        "estado": "Activo",
+    }
+    response = client.post("/monitoreo/validar-curso", json=curso_contiguo, headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    assert response.json()["valido"] is True
+
+
+def test_incidencias_acepta_aliases_lowercase_y_camelcase():
+    """Verifica que POST /incidencias acepte y devuelva tanto docenteId como docenteid y cursoId como cursoid."""
+    payload = {
+        "id": "INC-ALIAS-01",
+        "docente": "Miguel Ángel Paredes Ruiz",
+        "docenteid": "USR-003",
+        "cursoid": "CRS-002",
+        "tipo": "Tardanza",
+        "materia": "Física Fundamental",
+        "horario": "Martes 08:00 - 10:00",
+        "motivo": "Tráfico intenso",
+        "docentepropuesto": "Juan Gabriel Pérez Ramos",
+    }
+    response = client.post("/incidencias", json=payload, headers=DOCENTE_HEADERS)
+    assert response.status_code == 201
+    inc = response.json()["incidencia"]
+    assert inc["docenteId"] == "USR-003"
+    assert inc["docenteid"] == "USR-003"
+    assert inc["cursoId"] == "CRS-002"
+    assert inc["cursoid"] == "CRS-002"
+    assert inc["docentePropuesto"] == "Juan Gabriel Pérez Ramos"
+
+
+

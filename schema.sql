@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
     "cursosInscritos" JSONB DEFAULT '[]'::jsonb,
     ciclovirtual TEXT DEFAULT 'Semestral',
     salario NUMERIC DEFAULT 0,
+    especialidad TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT check_users_dni CHECK (
         dni IS NULL OR (

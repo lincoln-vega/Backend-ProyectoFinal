@@ -1,8 +1,10 @@
+import json
 import re
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator
 from database import load_db, save_db, get_pg_connection, fetch_all_as_dict, fetch_one_as_dict
 from auth import (
     authenticate_with_insforge,
@@ -13,36 +15,86 @@ from auth import (
 # Router para gestión de usuarios
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
-# --- FUNCIONES DE VALIDACIÓN ESTÁNDAR (CAPA 2) ---
+# --- FUNCIONES DE NORMALIZACIÓN Y VALIDACIÓN ESTÁNDAR (CAPA 2) ---
+
+def parse_course_list(value: Any) -> List[str]:
+    """
+    Normaliza cursosInscritos y cursosAsignados desde texto separado por comas ("CRS-001,CRS-002"),
+    literales de array Postgres ("{CRS-001,CRS-002}"), JSON array ('["CRS-001"]') o listas Python
+    a list[str] limpios.
+    """
+    if not value:
+        return []
+    if isinstance(value, list):
+        result = []
+        for item in value:
+            if isinstance(item, dict):
+                val = item.get("id")
+            else:
+                val = item
+            if val is not None and str(val).strip():
+                result.append(str(val).strip())
+        return result
+    if isinstance(value, str):
+        trimmed = value.strip()
+        if not trimmed:
+            return []
+        if trimmed.startswith("[") and trimmed.endswith("]"):
+            try:
+                parsed = json.loads(trimmed)
+                if isinstance(parsed, list):
+                    return parse_course_list(parsed)
+            except Exception:
+                pass
+        clean_str = re.sub(r"^\{|\}$|^\[|\]$", "", trimmed)
+        return [
+            re.sub(r'^["\']|["\']$', "", s.strip())
+            for s in clean_str.split(",")
+            if re.sub(r'^["\']|["\']$', "", s.strip())
+        ]
+    return []
+
 
 def validar_formato_documento(tipo: str, doc: str) -> str:
-    tipo = (tipo or "DNI").strip().upper()
+    tipo_norm = (tipo or "DNI").strip().upper()
     doc_clean = str(doc or "").strip().upper()
     if not doc_clean:
         raise ValueError("El número de documento de identidad es obligatorio.")
 
-    if tipo == "DNI":
+    if tipo_norm == "DNI":
         if not re.match(r"^\d{8}$", doc_clean):
             raise ValueError("El DNI peruano debe contener exactamente 8 dígitos numéricos y no permite letras.")
-    elif tipo in ["CE", "CARNET DE EXTRANJERÍA", "CARNET DE EXTRANJERIA"]:
+    elif tipo_norm in ["CE", "CARNET DE EXTRANJERÍA", "CARNET DE EXTRANJERIA"]:
         if not re.match(r"^[A-Z0-9]{9,12}$", doc_clean):
             raise ValueError("El Carnet de Extranjería (CE) debe contener entre 9 y 12 caracteres alfanuméricos.")
-    elif tipo in ["PASAPORTE", "PAS"]:
+    elif tipo_norm in ["PASAPORTE", "PAS"]:
         if not re.match(r"^[A-Z0-9]{6,12}$", doc_clean):
             raise ValueError("El Pasaporte debe contener entre 6 y 12 caracteres alfanuméricos.")
     else:
         raise ValueError(f"Tipo de documento '{tipo}' no reconocido. Seleccione DNI, CE o Pasaporte.")
-    
+
     return doc_clean
+
 
 def validar_formato_celular(cel: Optional[str]) -> Optional[str]:
     if cel is None or str(cel).strip() == "":
         return None
     cel_clean = str(cel).strip()
-    # Admite nacional de Perú (9 dígitos iniciando en 9) o Internacional con + (ej. +573001234567)
     if not (re.match(r"^9\d{8}$", cel_clean) or re.match(r"^\+\d{8,15}$", cel_clean)):
         raise ValueError("El número telefónico debe contener 9 dígitos numéricos iniciando en 9 (Perú) o formato internacional con prefijo '+' y entre 8 y 15 dígitos.")
     return cel_clean
+
+
+def normalizar_rol(rol: Optional[str]) -> str:
+    r = str(rol or "estudiante").strip().lower()
+    if r.startswith("admin"):
+        return "admin"
+    if r.startswith("doc") or r.startswith("prof"):
+        return "docente"
+    if r.startswith("est") or r.startswith("alum"):
+        return "estudiante"
+    raise ValueError("El rol debe ser admin, docente o estudiante.")
+
 
 # --- MODELOS PYDANTIC ---
 
@@ -50,31 +102,122 @@ class UserLogin(BaseModel):
     correo: str
     password: str
 
+
 class ValidationCheckRequest(BaseModel):
     tipoDocumento: Optional[str] = "DNI"
     dni: Optional[str] = None
     celular: Optional[str] = None
     correo: Optional[str] = None
 
-class UserCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
 
-    authUserId: UUID
+class UsuarioResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    id: str
+    nombres: str = ""
+    apellidos: str = ""
+    tipoDocumento: str = "DNI"
+    dni: Optional[str] = ""
+    fechaNacimiento: Optional[str] = ""
+    correo: str
+    celular: Optional[str] = ""
+    carreraObjetivo: Optional[str] = ""
+    areaAcademica: Optional[str] = ""
+    rol: str = "estudiante"
+    estado: str = "Activo"
+    ciclovirtual: str = Field(
+        default="Semestral",
+        validation_alias=AliasChoices("ciclovirtual", "cicloVirtual", "ciclo_virtual"),
+    )
+    cicloVirtual: str = "Semestral"
+    salario: Optional[float] = 0.0
+    especialidad: Optional[str] = ""
+    cursosAsignados: List[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("cursosAsignados", "cursos_asignados", "CursosAsignados"),
+    )
+    cursosInscritos: List[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("cursosInscritos", "cursos_inscritos", "CursosInscritos"),
+    )
+    auth_user_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("auth_user_id", "authUserId"),
+    )
+    created_at: Optional[Union[str, datetime]] = None
+
+    @field_validator("cursosAsignados", "cursosInscritos", mode="before")
+    @classmethod
+    def normalizar_listas_cursos(cls, v: Any) -> List[str]:
+        return parse_course_list(v)
+
+    @field_validator("auth_user_id", mode="before")
+    @classmethod
+    def normalizar_auth_id(cls, v: Any) -> Optional[str]:
+        return str(v) if v is not None else None
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def normalizar_created_at(cls, v: Any) -> Optional[str]:
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return str(v) if v is not None else None
+
+    @model_validator(mode="after")
+    def sincronizar_aliases(self):
+        ciclo = self.ciclovirtual or self.cicloVirtual or "Semestral"
+        self.ciclovirtual = ciclo
+        self.cicloVirtual = ciclo
+        if not self.especialidad:
+            self.especialidad = self.areaAcademica or self.carreraObjetivo or ""
+        return self
+
+
+def sanitizar_usuario_por_rol(user_dict: Dict[str, Any], requester_role: str) -> Dict[str, Any]:
+    """
+    Convierte una fila de base de datos o dict al esquema UsuarioResponse
+    y oculta campos financieros sensibles (salario) si quien consulta es Estudiante.
+    Nunca expone password ni tokens.
+    """
+    clean_input = {k: v for k, v in user_dict.items() if k not in {"password", "hashed_password", "token", "service_token", "universidad"}}
+    validated = UsuarioResponse.model_validate(clean_input).model_dump()
+    if str(requester_role or "").strip().lower() == "estudiante":
+        validated["salario"] = None
+    return validated
+
+
+class UserCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    id: Optional[str] = None
+    authUserId: UUID = Field(
+        ...,
+        validation_alias=AliasChoices("authUserId", "auth_user_id"),
+    )
     nombres: str = Field(..., min_length=2, max_length=100, description="Nombres del usuario")
     apellidos: str = Field(..., min_length=2, max_length=100, description="Apellidos del usuario")
     correo: str = Field(..., description="Correo institucional o personal")
-    rol: Literal["admin", "docente", "estudiante"] = Field(
-        "estudiante",
-        description="Rol: admin, docente, estudiante",
-    )
+    rol: str = Field("estudiante", description="Rol: admin, docente, estudiante")
     estado: str = Field("Activo", description="Estado: Activo o Inactivo")
     tipoDocumento: str = Field("DNI", description="Tipo de documento: DNI, CE, Pasaporte")
     dni: str = Field(..., description="Número de documento")
     celular: Optional[str] = Field(None, description="Celular nacional (9 dígitos) o internacional con +")
     fechaNacimiento: Optional[str] = None
     carreraObjetivo: Optional[str] = None
-    cicloVirtual: Optional[str] = "Semestral"
+    cicloVirtual: Optional[str] = Field(
+        default="Semestral",
+        validation_alias=AliasChoices("cicloVirtual", "ciclovirtual"),
+    )
     areaAcademica: Optional[str] = None
+    salario: Optional[float] = None
+    especialidad: Optional[str] = None
+    cursosAsignados: List[str] = Field(default_factory=list)
+    cursosInscritos: List[str] = Field(default_factory=list)
+
+    @field_validator("rol", mode="before")
+    @classmethod
+    def validar_rol_campo(cls, v: str) -> str:
+        return normalizar_rol(v)
 
     @field_validator("correo")
     @classmethod
@@ -83,14 +226,24 @@ class UserCreate(BaseModel):
             raise ValueError("El formato del correo electrónico es inválido.")
         return str(v).strip().lower()
 
+    @field_validator("cursosAsignados", "cursosInscritos", mode="before")
+    @classmethod
+    def validar_listas_cursos(cls, v: Any) -> List[str]:
+        return parse_course_list(v)
+
     @model_validator(mode="after")
     def validar_documento_y_telefono(self):
         self.dni = validar_formato_documento(self.tipoDocumento, self.dni)
         self.celular = validar_formato_celular(self.celular)
+        if self.salario is None:
+            self.salario = 3200.0 if self.rol == "docente" else 0.0
+        if not self.especialidad:
+            self.especialidad = self.areaAcademica or self.carreraObjetivo or ""
         return self
 
+
 class UserUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     nombres: Optional[str] = None
     apellidos: Optional[str] = None
@@ -102,8 +255,33 @@ class UserUpdate(BaseModel):
     celular: Optional[str] = None
     fechaNacimiento: Optional[str] = None
     carreraObjetivo: Optional[str] = None
-    cicloVirtual: Optional[str] = None
+    cicloVirtual: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("cicloVirtual", "ciclovirtual"),
+    )
     areaAcademica: Optional[str] = None
+    salario: Optional[float] = None
+    especialidad: Optional[str] = None
+    cursosAsignados: Optional[List[str]] = None
+    cursosInscritos: Optional[List[str]] = None
+    authUserId: Optional[UUID] = Field(
+        default=None,
+        validation_alias=AliasChoices("authUserId", "auth_user_id"),
+    )
+
+    @field_validator("rol", mode="before")
+    @classmethod
+    def validar_rol_opcional(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        return normalizar_rol(v)
+
+    @field_validator("cursosAsignados", "cursosInscritos", mode="before")
+    @classmethod
+    def validar_listas_opcional(cls, v: Any) -> Optional[List[str]]:
+        if v is None:
+            return None
+        return parse_course_list(v)
 
     @model_validator(mode="after")
     def validar_update(self):
@@ -113,6 +291,7 @@ class UserUpdate(BaseModel):
         if self.celular is not None and str(self.celular).strip():
             self.celular = validar_formato_celular(self.celular)
         return self
+
 
 # --- ENDPOINT DE VALIDACIÓN PREVIA (CAPA 2) ---
 
@@ -128,13 +307,13 @@ def validar_datos_usuario(req: ValidationCheckRequest):
             validar_formato_documento(req.tipoDocumento or "DNI", req.dni)
         except ValueError as e:
             errores["dni"] = str(e)
-    
+
     if req.celular is not None and str(req.celular).strip() != "":
         try:
             validar_formato_celular(req.celular)
         except ValueError as e:
             errores["celular"] = str(e)
-            
+
     if req.correo is not None and str(req.correo).strip() != "":
         correo_val = str(req.correo).strip()
         if "@" not in correo_val:
@@ -143,10 +322,11 @@ def validar_datos_usuario(req: ValidationCheckRequest):
     if errores:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"mensaje": "Error de validación en campos del usuario", "errores": errores}
+            detail={"mensaje": "Error de validación en campos del usuario", "errores": errores},
         )
 
     return {"valido": True, "mensaje": "Validación exitosa: documento y número telefónico conformes"}
+
 
 # --- ENDPOINT DE LOGIN ---
 
@@ -170,33 +350,41 @@ def login(form_data: UserLogin):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="La cuenta de Auth no tiene un perfil registrado en users.",
         )
-    
-    if user.get("estado", "Activo") != "Activo":
-        raise HTTPException(status_code=403, detail="Cuenta inactiva")
+
+    if str(user.get("estado", "Activo")).strip().lower() != "activo":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta se encuentra inactiva",
+        )
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "role": user["rol"],
-        "name": f"{user['nombres']} {user['apellidos']}"
+        "name": f"{user['nombres']} {user['apellidos']}",
     }
+
 
 # --- CRUD DE USUARIOS ---
 
-@router.get("/", dependencies=[Depends(require_role(["admin", "docente"]))])
-def listar_usuarios():
+@router.get("/", response_model=List[UsuarioResponse])
+def listar_usuarios(
+    current_user: Dict[str, Any] = Depends(require_role(["admin", "docente", "estudiante"])),
+):
+    requester_role = str(current_user.get("rol", "estudiante"))
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, nombres, apellidos, "tipoDocumento", dni, "fechaNacimiento", correo, celular,
-                           "carreraObjetivo", "areaAcademica", rol, estado,
-                           ciclovirtual, salario, created_at
+                cur.execute(
+                    """
+                    SELECT *
                     FROM users
                     ORDER BY created_at DESC;
-                """)
-                return fetch_all_as_dict(cur)
+                    """
+                )
+                rows = fetch_all_as_dict(cur)
+                return [sanitizar_usuario_por_rol(row, requester_role) for row in rows]
         except Exception as e:
             print(f"[Listar Usuarios] Error en Postgres: {e}")
         finally:
@@ -204,9 +392,57 @@ def listar_usuarios():
 
     db = load_db()
     return [
-        {k: v for k, v in user.items() if k not in {"password", "universidad"}}
+        sanitizar_usuario_por_rol(user, requester_role)
         for user in db.get("users", [])
     ]
+
+
+@router.get("/{identificador}", response_model=UsuarioResponse)
+def obtener_usuario(
+    identificador: str,
+    current_user: Dict[str, Any] = Depends(require_role(["admin", "docente", "estudiante"])),
+):
+    requester_role = str(current_user.get("rol", "estudiante"))
+    conn = get_pg_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT *
+                    FROM users
+                    WHERE id = %s OR LOWER(correo) = LOWER(%s) OR dni = %s
+                    LIMIT 1;
+                    """,
+                    (identificador, identificador, identificador),
+                )
+                row = fetch_one_as_dict(cur)
+                if not row:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+                return sanitizar_usuario_por_rol(row, requester_role)
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[Obtener Usuario] Error en Postgres: {e}")
+        finally:
+            conn.close()
+
+    db = load_db()
+    ident_lower = identificador.strip().lower()
+    user = next(
+        (
+            u
+            for u in db.get("users", [])
+            if str(u.get("id", "")) == identificador
+            or str(u.get("correo", "")).lower() == ident_lower
+            or str(u.get("dni", "")) == identificador
+        ),
+        None,
+    )
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+    return sanitizar_usuario_por_rol(user, requester_role)
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def crear_usuario(
@@ -214,10 +450,10 @@ def crear_usuario(
     admin: Dict[str, Any] = Depends(require_role(["admin"])),
 ):
     """
-    Crea el perfil asociado a una cuenta ya creada en InsForge Auth.
-    Solo un administrador puede asignar el rol y guardar el perfil.
+    Crea el perfil asociado a una cuenta ya creada en InsForge Auth y devuelve
+    el objeto completo del usuario recién insertado.
     """
-    if admin.get("estado", "Activo") != "Activo":
+    if str(admin.get("estado", "Activo")).strip().lower() != "activo":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="La cuenta administradora está inactiva.",
@@ -245,13 +481,14 @@ def crear_usuario(
             )
             if fetch_one_as_dict(cur):
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_409_CONFLICT,
                     detail="Ya existe un perfil con ese correo, documento o cuenta de Auth.",
                 )
 
             cur.execute("SELECT COUNT(*) FROM users;")
             count_row = fetch_one_as_dict(cur)
-            user_dict["id"] = f"USR-{(count_row['count'] if count_row else 0) + 101:03d}"
+            generated_id = user_dict.get("id") or f"USR-{(count_row['count'] if count_row else 0) + 101:03d}"
+            user_dict["id"] = generated_id
 
             cur.execute(
                 """
@@ -283,11 +520,46 @@ def crear_usuario(
                     user_dict.get("cicloVirtual") or "Semestral",
                 ),
             )
-            created = fetch_one_as_dict(cur)
+            created = fetch_one_as_dict(cur) or {}
+
+            # Actualizar campos extendidos (salario, cursosAsignados, cursosInscritos, especialidad) si existen en la tabla
+            try:
+                cur.execute(
+                    """
+                    UPDATE users
+                    SET salario = %s,
+                        "cursosAsignados" = %s::jsonb,
+                        "cursosInscritos" = %s::jsonb
+                    WHERE id = %s;
+                    """,
+                    (
+                        user_dict.get("salario", 0.0),
+                        json.dumps(user_dict.get("cursosAsignados") or []),
+                        json.dumps(user_dict.get("cursosInscritos") or []),
+                        user_dict["id"],
+                    ),
+                )
+            except Exception:
+                pass
+
             conn.commit()
+
+            full_created = {
+                **user_dict,
+                **created,
+                "auth_user_id": str(created.get("auth_user_id") or auth_user_id),
+                "ciclovirtual": user_dict.get("cicloVirtual") or "Semestral",
+                "cicloVirtual": user_dict.get("cicloVirtual") or "Semestral",
+                "salario": user_dict.get("salario", 0.0),
+                "especialidad": user_dict.get("especialidad") or user_dict.get("areaAcademica") or user_dict.get("carreraObjetivo") or "",
+                "cursosAsignados": parse_course_list(created.get("cursosAsignados") or user_dict.get("cursosAsignados")),
+                "cursosInscritos": parse_course_list(created.get("cursosInscritos") or user_dict.get("cursosInscritos")),
+            }
+            normalized_user = UsuarioResponse.model_validate(full_created).model_dump()
             return {
+                **normalized_user,
                 "mensaje": "Perfil de usuario creado correctamente.",
-                "usuario": created,
+                "usuario": normalized_user,
             }
     except HTTPException:
         conn.rollback()
@@ -312,32 +584,62 @@ def crear_usuario(
     finally:
         conn.close()
 
+
 @router.put("/{identificador}", dependencies=[Depends(require_role(["admin"]))])
 def actualizar_usuario(identificador: str, user_data: UserUpdate):
     update_data = user_data.model_dump(exclude_unset=True)
+    if "cicloVirtual" in update_data:
+        update_data["ciclovirtual"] = update_data.pop("cicloVirtual")
+    if "authUserId" in update_data:
+        update_data["auth_user_id"] = str(update_data.pop("authUserId"))
+
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT id FROM users WHERE id = %s OR correo = %s LIMIT 1;", 
-                            (identificador, identificador))
+                cur.execute(
+                    "SELECT * FROM users WHERE id = %s OR correo = %s LIMIT 1;",
+                    (identificador, identificador),
+                )
                 user = fetch_one_as_dict(cur)
                 if not user:
-                    raise HTTPException(status_code=404, detail="Usuario no encontrado")
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
+                quoted_cols = {
+                    "fechaNacimiento",
+                    "carreraObjetivo",
+                    "areaAcademica",
+                    "tipoDocumento",
+                    "cursosAsignados",
+                    "cursosInscritos",
+                }
                 set_clauses = []
                 values = []
                 for k, v in update_data.items():
-                    col_name = f'"{k}"' if k in ["fechaNacimiento", "carreraObjetivo", "areaAcademica", "tipoDocumento"] else k
-                    set_clauses.append(f"{col_name} = %s")
-                    values.append(v)
+                    if k == "especialidad" and "especialidad" not in user:
+                        continue
+                    col_name = f'"{k}"' if k in quoted_cols else k
+                    if k in {"cursosAsignados", "cursosInscritos"}:
+                        set_clauses.append(f"{col_name} = %s::jsonb")
+                        values.append(json.dumps(parse_course_list(v)))
+                    else:
+                        set_clauses.append(f"{col_name} = %s")
+                        values.append(v)
 
+                updated_row = user
                 if set_clauses:
                     values.append(user["id"])
-                    query = f"UPDATE users SET {', '.join(set_clauses)} WHERE id = %s RETURNING id, nombres, apellidos, dni, celular;"
+                    query = f"UPDATE users SET {', '.join(set_clauses)} WHERE id = %s RETURNING *;"
                     cur.execute(query, tuple(values))
+                    updated_row = fetch_one_as_dict(cur) or {**user, **update_data}
                     conn.commit()
-                return {"mensaje": "Usuario actualizado correctamente"}
+
+                normalized = UsuarioResponse.model_validate({**user, **update_data, **updated_row}).model_dump()
+                return {
+                    **normalized,
+                    "mensaje": "Usuario actualizado correctamente",
+                    "usuario": normalized,
+                }
         except HTTPException:
             raise
         except Exception as e:
@@ -347,7 +649,7 @@ def actualizar_usuario(identificador: str, user_data: UserUpdate):
                 raise HTTPException(status_code=422, detail="Error DB: El documento no cumple el formato válido")
             if "check_users_celular" in err_msg:
                 raise HTTPException(status_code=422, detail="Error DB: El celular no cumple el formato nacional o internacional")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail="No se pudo actualizar el usuario en la base de datos.")
         finally:
             conn.close()
 
@@ -355,11 +657,17 @@ def actualizar_usuario(identificador: str, user_data: UserUpdate):
     users = db.get("users", [])
     user = next((u for u in users if u.get("correo") == identificador or u.get("id") == identificador), None)
     if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     for key, value in update_data.items():
         user[key] = value
     save_db(db)
-    return {"mensaje": "Usuario actualizado correctamente (modo local)"}
+    normalized = UsuarioResponse.model_validate(user).model_dump()
+    return {
+        **normalized,
+        "mensaje": "Usuario actualizado correctamente (modo local)",
+        "usuario": normalized,
+    }
+
 
 @router.delete("/{identificador}", dependencies=[Depends(require_role(["admin"]))])
 def eliminar_usuario(identificador: str):
@@ -367,13 +675,15 @@ def eliminar_usuario(identificador: str):
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM users WHERE id = %s OR correo = %s RETURNING id;", 
-                            (identificador, identificador))
+                cur.execute(
+                    "DELETE FROM users WHERE id = %s OR correo = %s RETURNING id;",
+                    (identificador, identificador),
+                )
                 deleted = cur.fetchone()
                 conn.commit()
                 if not deleted:
-                    raise HTTPException(status_code=404, detail="Usuario no encontrado")
-                return {"mensaje": "Usuario eliminado correctamente"}
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+                return {"mensaje": "Usuario eliminado correctamente", "id": deleted[0]}
         finally:
             conn.close()
 
@@ -381,7 +691,7 @@ def eliminar_usuario(identificador: str):
     users = db.get("users", [])
     user_to_delete = next((u for u in users if u.get("correo") == identificador or u.get("id") == identificador), None)
     if not user_to_delete:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     db["users"] = [u for u in users if u.get("correo") != identificador and u.get("id") != identificador]
     save_db(db)
-    return {"mensaje": "Usuario eliminado correctamente (modo local)"}
+    return {"mensaje": "Usuario eliminado correctamente (modo local)", "id": user_to_delete.get("id")}
