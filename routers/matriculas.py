@@ -167,6 +167,7 @@ def crear_matricula(matricula: MatriculaCreate):
         db["matriculas"] = []
 
     if any(m["id"] == matricula.id for m in db["matriculas"]):
+        print(f"[ERROR - CREAR MATRÍCULA] Ocurrió un error al registrar la matrícula '{matricula.id}' para '{matricula.estudiante}'. Motivo: El ID de matrícula ya existe.")
         raise HTTPException(status_code=400, detail="El ID de matrícula ya existe")
 
     conn = get_pg_connection()
@@ -175,6 +176,7 @@ def crear_matricula(matricula: MatriculaCreate):
             with conn.cursor() as cur:
                 cur.execute("SELECT id FROM matriculas WHERE id = %s LIMIT 1;", (matricula.id,))
                 if fetch_one_as_dict(cur):
+                    print(f"[ERROR - CREAR MATRÍCULA] Ocurrió un error al registrar la matrícula '{matricula.id}' para '{matricula.estudiante}'. Motivo: El ID de matrícula ya existe en PostgreSQL.")
                     raise HTTPException(status_code=400, detail="El ID de matrícula ya existe")
 
                 cur.execute(
@@ -228,6 +230,7 @@ def crear_matricula(matricula: MatriculaCreate):
         )
         mat_dict["cursosInscritos"] = cursos_actualizados
 
+    print(f"[OK - CREAR MATRÍCULA] Matrícula '{matricula.id}' del estudiante '{matricula.estudiante}' (Programa: {matricula.programa}) registrada correctamente.")
     return {
         "mensaje": "Matrícula registrada exitosamente",
         "matricula": mat_dict,
@@ -324,6 +327,7 @@ def registrar_pago(pago: PagoCreate):
             conn.close()
 
     if not matricula and not pg_mat:
+        print(f"[ERROR - REGISTRAR PAGO] Ocurrió un error al registrar el pago '{pago.id}' de '{pago.estudiante}'. Motivo: Matrícula asociada '{pago.matriculaId}' no encontrada.")
         raise HTTPException(status_code=404, detail="Matrícula asociada no encontrada")
 
     if matricula:
@@ -334,4 +338,5 @@ def registrar_pago(pago: PagoCreate):
 
     db["pagos"].insert(0, pago.model_dump())
     save_db(db)
+    print(f"[OK - REGISTRAR PAGO] Pago '{pago.id}' (Comprobante: {pago.comprobante}, Monto: S/ {pago.monto}) del estudiante '{pago.estudiante}' registrado correctamente.")
     return {"mensaje": "Pago registrado y saldo actualizado", "pago": pago}

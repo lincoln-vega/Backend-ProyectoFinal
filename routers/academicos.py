@@ -96,9 +96,11 @@ def crear_area(area: AreaAcademicaCreate):
                 """, (area.id, area.codigo, area.nombre, area.descripcion, area.color, area.estado))
                 nuevo = fetch_one_as_dict(cur)
                 conn.commit()
+                print(f"[OK - CREAR ÁREA] Área académica '{area.nombre}' (ID: {area.id}) creada correctamente.")
                 return {"mensaje": "Área académica creada exitosamente", "area": nuevo}
         except Exception as e:
             conn.rollback()
+            print(f"[ERROR - CREAR ÁREA] Ocurrió un error al crear el área académica '{area.nombre}'. Motivo: {e}")
             raise HTTPException(status_code=400, detail="No se pudo registrar el área académica. Verifique que el ID o código no estén duplicados.")
         finally:
             conn.close()
@@ -106,10 +108,12 @@ def crear_area(area: AreaAcademicaCreate):
     db = load_db()
     areas = db.get("areas_academicas", [])
     if any(a["id"] == area.id or a["codigo"] == area.codigo for a in areas):
+        print(f"[ERROR - CREAR ÁREA] Ocurrió un error al crear el área académica '{area.nombre}'. Motivo: El ID ({area.id}) o código ({area.codigo}) ya existe.")
         raise HTTPException(status_code=400, detail="El ID o código ya existe")
     areas.append(area.model_dump())
     db["areas_academicas"] = areas
     save_db(db)
+    print(f"[OK - CREAR ÁREA] Área académica '{area.nombre}' (ID: {area.id}) creada correctamente (modo local).")
     return {"mensaje": "Área académica creada exitosamente", "area": area}
 
 # ==============================================================================
@@ -168,9 +172,11 @@ def crear_carrera(carrera: CarreraCreate):
                 ))
                 nuevo = fetch_one_as_dict(cur)
                 conn.commit()
+                print(f"[OK - CREAR CARRERA] Carrera profesional '{carrera.nombre}' (ID: {carrera.id}) registrada correctamente.")
                 return {"mensaje": "Carrera registrada exitosamente", "carrera": nuevo}
         except Exception as e:
             conn.rollback()
+            print(f"[ERROR - CREAR CARRERA] Ocurrió un error al registrar la carrera '{carrera.nombre}'. Motivo: {e}")
             raise HTTPException(status_code=400, detail="No se pudo registrar la carrera profesional. Verifique que el ID, código y área asociada sean válidos.")
         finally:
             conn.close()
@@ -178,10 +184,12 @@ def crear_carrera(carrera: CarreraCreate):
     db = load_db()
     carreras = db.get("carreras", [])
     if any(c["id"] == carrera.id or c["codigo"] == carrera.codigo for c in carreras):
+        print(f"[ERROR - CREAR CARRERA] Ocurrió un error al registrar la carrera '{carrera.nombre}'. Motivo: El ID ({carrera.id}) o código ({carrera.codigo}) ya existe.")
         raise HTTPException(status_code=400, detail="El ID o código de carrera ya existe")
     carreras.append(carrera.model_dump())
     db["carreras"] = carreras
     save_db(db)
+    print(f"[OK - CREAR CARRERA] Carrera profesional '{carrera.nombre}' (ID: {carrera.id}) registrada correctamente (modo local).")
     return {"mensaje": "Carrera registrada exitosamente", "carrera": carrera}
 
 # ==============================================================================
@@ -219,9 +227,11 @@ def crear_tipo_ciclo(tipo: TipoCicloCreate):
                 """, (tipo.id, tipo.codigo, tipo.nombre, tipo.duracion_semanas, tipo.modalidad, tipo.descripcion, tipo.estado))
                 nuevo = fetch_one_as_dict(cur)
                 conn.commit()
+                print(f"[OK - CREAR TIPO CICLO] Tipo de ciclo '{tipo.nombre}' (ID: {tipo.id}) creado correctamente.")
                 return {"mensaje": "Tipo de ciclo creado exitosamente", "tipo_ciclo": nuevo}
         except Exception as e:
             conn.rollback()
+            print(f"[ERROR - CREAR TIPO CICLO] Ocurrió un error al crear el tipo de ciclo '{tipo.nombre}'. Motivo: {e}")
             raise HTTPException(status_code=400, detail="No se pudo registrar el tipo de ciclo. Verifique que el ID o código no estén duplicados.")
         finally:
             conn.close()
@@ -229,10 +239,12 @@ def crear_tipo_ciclo(tipo: TipoCicloCreate):
     db = load_db()
     tipos = db.get("tipos_ciclo", [])
     if any(t["id"] == tipo.id or t["codigo"] == tipo.codigo for t in tipos):
+        print(f"[ERROR - CREAR TIPO CICLO] Ocurrió un error al crear el tipo de ciclo '{tipo.nombre}'. Motivo: El ID ({tipo.id}) o código ({tipo.codigo}) ya existe.")
         raise HTTPException(status_code=400, detail="El ID o código ya existe")
     tipos.append(tipo.model_dump())
     db["tipos_ciclo"] = tipos
     save_db(db)
+    print(f"[OK - CREAR TIPO CICLO] Tipo de ciclo '{tipo.nombre}' (ID: {tipo.id}) creado correctamente (modo local).")
     return {"mensaje": "Tipo de ciclo creado exitosamente", "tipo_ciclo": tipo}
 
 # ==============================================================================
@@ -297,9 +309,11 @@ def crear_ciclo(ciclo: CicloAcademicoCreate):
                 ))
                 nuevo = fetch_one_as_dict(cur)
                 conn.commit()
+                print(f"[OK - CREAR CICLO] Ciclo académico '{ciclo.nombre}' (ID: {ciclo.id}) registrado correctamente.")
                 return {"mensaje": "Ciclo académico registrado exitosamente", "ciclo": nuevo}
         except Exception as e:
             conn.rollback()
+            print(f"[ERROR - CREAR CICLO] Ocurrió un error al registrar el ciclo académico '{ciclo.nombre}'. Motivo: {e}")
             raise HTTPException(status_code=400, detail="No se pudo registrar el ciclo académico. Verifique los datos y fechas ingresadas.")
         finally:
             conn.close()
@@ -307,10 +321,12 @@ def crear_ciclo(ciclo: CicloAcademicoCreate):
     db = load_db()
     ciclos = db.get("ciclos_academicos", [])
     if any(c["id"] == ciclo.id or c["codigo"] == ciclo.codigo for c in ciclos):
+        print(f"[ERROR - CREAR CICLO] Ocurrió un error al registrar el ciclo académico '{ciclo.nombre}'. Motivo: El ID ({ciclo.id}) o código ({ciclo.codigo}) ya existe.")
         raise HTTPException(status_code=400, detail="El ID o código ya existe")
     ciclos.append(ciclo.model_dump())
     db["ciclos_academicos"] = ciclos
     save_db(db)
+    print(f"[OK - CREAR CICLO] Ciclo académico '{ciclo.nombre}' (ID: {ciclo.id}) registrado correctamente (modo local).")
     return {"mensaje": "Ciclo académico registrado exitosamente", "ciclo": ciclo}
 
 # ==============================================================================
@@ -348,9 +364,11 @@ def crear_turno(turno: TurnoCreate):
                 """, (turno.id, turno.codigo, turno.nombre, turno.hora_inicio, turno.hora_fin, turno.estado))
                 nuevo = fetch_one_as_dict(cur)
                 conn.commit()
+                print(f"[OK - CREAR TURNO] Turno '{turno.nombre}' (ID: {turno.id}) creado correctamente.")
                 return {"mensaje": "Turno creado exitosamente", "turno": nuevo}
         except Exception as e:
             conn.rollback()
+            print(f"[ERROR - CREAR TURNO] Ocurrió un error al crear el turno '{turno.nombre}'. Motivo: {e}")
             raise HTTPException(status_code=400, detail="No se pudo registrar el turno institucional. Verifique que el ID o código no estén duplicados.")
         finally:
             conn.close()
@@ -358,10 +376,12 @@ def crear_turno(turno: TurnoCreate):
     db = load_db()
     turnos = db.get("turnos", [])
     if any(t["id"] == turno.id or t["codigo"] == turno.codigo for t in turnos):
+        print(f"[ERROR - CREAR TURNO] Ocurrió un error al crear el turno '{turno.nombre}'. Motivo: El ID ({turno.id}) o código ({turno.codigo}) ya existe.")
         raise HTTPException(status_code=400, detail="El ID o código ya existe")
     turnos.append(turno.model_dump())
     db["turnos"] = turnos
     save_db(db)
+    print(f"[OK - CREAR TURNO] Turno '{turno.nombre}' (ID: {turno.id}) creado correctamente (modo local).")
     return {"mensaje": "Turno creado exitosamente", "turno": turno}
 
 @router.get("/oferta")

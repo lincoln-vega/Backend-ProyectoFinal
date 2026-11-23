@@ -132,6 +132,7 @@ TRANSICIONES_PERMITIDAS = {
 
 def validar_transicion_estado(estado_actual: str, nuevo_estado: str):
     if nuevo_estado not in ESTADOS_VALIDOS:
+        print(f"[ERROR - INCIDENCIA] Ocurrió un error al cambiar estado a '{nuevo_estado}'. Motivo: Estado destino inválido (permitidos: {list(ESTADOS_VALIDOS)}).")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Estado destino '{nuevo_estado}' no es válido. Estados permitidos: {list(ESTADOS_VALIDOS)}",
@@ -142,6 +143,7 @@ def validar_transicion_estado(estado_actual: str, nuevo_estado: str):
 
     permitidos = TRANSICIONES_PERMITIDAS.get(estado_actual, set())
     if nuevo_estado not in permitidos:
+        print(f"[ERROR - INCIDENCIA] Ocurrió un error al cambiar estado de '{estado_actual}' a '{nuevo_estado}'. Motivo: Transición prohibida por la Máquina de Estados.")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Transición prohibida por la Máquina de Estados: no se puede pasar de '{estado_actual}' a '{nuevo_estado}'.",
@@ -274,6 +276,7 @@ def registrar_incidencia(datos: IncidenciaCreate):
 
     incidencias.insert(0, nueva_incidencia)
     save_db(db)
+    print(f"[OK - CREAR INCIDENCIA] Incidencia '{nuevo_id}' ({datos.tipo} - Docente: '{datos.docente}', Curso: '{datos.materia}') registrada correctamente en estado 'Pendiente'.")
 
     return {
         "mensaje": "Solicitud / Incidencia registrada correctamente en estado 'Pendiente'",
@@ -303,6 +306,7 @@ def cambiar_estado_incidencia(incidencia_id: str, transicion: EstadoTransitionUp
 
     target = pg_incidencia or incidencia
     if not target:
+        print(f"[ERROR - INCIDENCIA] Ocurrió un error al actualizar la incidencia '{incidencia_id}'. Motivo: Incidencia no encontrada.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Incidencia {incidencia_id} no encontrada")
 
     estado_actual = target.get("estado", "Pendiente")
@@ -395,6 +399,7 @@ def cambiar_estado_incidencia(incidencia_id: str, transicion: EstadoTransitionUp
     save_db(db)
 
     normalized = normalizar_incidencia(target)
+    print(f"[OK - ESTADO INCIDENCIA] Incidencia '{incidencia_id}' (Docente: '{normalized.get('docente')}') actualizada de '{estado_actual}' a '{nuevo_estado}' correctamente.")
     return {
         "mensaje": f"Incidencia {incidencia_id} transicionada exitosamente de '{estado_actual}' a '{nuevo_estado}'.",
         "incidencia": normalized,
@@ -553,6 +558,7 @@ def calcular_cruce_nomina(params: ParametrosNomina):
         total_descuentos_general += descuento_pen
         total_monto_general += monto_neto
 
+    print(f"[OK - CRUCE NÓMINA] Cálculo de nómina del periodo '{params.periodo}' procesado correctamente ({len(docentes)} docentes auditados, Total Planilla: S/ {round(total_monto_general, 2)}).")
     return {
         "periodo": params.periodo,
         "fechaGeneracion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

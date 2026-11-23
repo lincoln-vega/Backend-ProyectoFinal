@@ -146,6 +146,7 @@ def crear_tarea(tarea: TareaCreate):
     }
     db["tareas"].insert(0, nueva_tarea_dict)
     save_db(db)
+    print(f"[OK - CREAR TAREA] Tarea '{tarea.titulo}' (ID: {tarea_id}, Curso: '{tarea.curso}') creada correctamente por '{tarea.docente}'.")
 
     return nueva_tarea_dict
 
@@ -329,6 +330,7 @@ def crear_anuncio(anuncio: AnuncioCreate):
     }
     db["anuncios"].insert(0, nuevo_anuncio_dict)
     save_db(db)
+    print(f"[OK - CREAR ANUNCIO] Anuncio '{anuncio.titulo}' (ID: {anuncio_id}, Curso: '{anuncio.curso}') publicado correctamente por '{anuncio.docente}'.")
 
     return nuevo_anuncio_dict
 

@@ -168,10 +168,12 @@ def crear_curso(course: CourseCreate):
     existing_courses = obtener_cursos_para_validacion()
 
     if any(c.get("id") == course.id for c in existing_courses):
+        print(f"[ERROR - CREAR CURSO] Ocurrió un error al crear el curso '{course.asignatura}' (ID: {course.id}). Motivo: El ID del curso ya existe.")
         raise HTTPException(status_code=400, detail="El ID del curso ya existe")
 
     cruce = verificar_cruce_virtual(course_dict, existing_courses)
     if cruce["status"] == "conflict":
+        print(f"[ERROR - CREAR CURSO] Ocurrió un error al crear el curso '{course.asignatura}'. Motivo: {cruce['detail']}")
         raise HTTPException(status_code=400, detail=cruce["detail"])
 
     conn = get_pg_connection()
@@ -220,6 +222,7 @@ def crear_curso(course: CourseCreate):
         save_db(db)
 
     sincronizar_cursos_asignados_docente(course.id, course.docenteId)
+    print(f"[OK - CREAR CURSO] Curso '{course.asignatura}' (ID: {course.id}, Docente: {course.docente}) creado correctamente.")
 
     return {"mensaje": "Curso registrado exitosamente", "id": course.id, "curso": course_dict}
 
@@ -228,6 +231,7 @@ def crear_curso(course: CourseCreate):
 @router.put("/cursos/{curso_id}", dependencies=[Depends(require_role(["admin"]))])
 def editar_curso(curso_id: str, course: CourseCreate):
     if course.id != curso_id:
+        print(f"[ERROR - EDITAR CURSO] Ocurrió un error al actualizar el curso '{course.asignatura}'. Motivo: El ID en la ruta ({curso_id}) no coincide con el cuerpo ({course.id}).")
         raise HTTPException(
             status_code=400,
             detail="El ID del curso en la ruta y en el cuerpo debe coincidir",
@@ -238,11 +242,13 @@ def editar_curso(curso_id: str, course: CourseCreate):
     curso_previo = next((c for c in existing_courses if c.get("id") == curso_id), None)
 
     if curso_previo is None:
+        print(f"[ERROR - EDITAR CURSO] Ocurrió un error al actualizar el curso '{course.asignatura}' (ID: {curso_id}). Motivo: Curso no encontrado.")
         raise HTTPException(status_code=404, detail="Curso no encontrado")
 
     # Validar que la edición no genere cruce con otros cursos activos del docente (excluyendo curso_id)
     cruce = verificar_cruce_virtual(course_dict, existing_courses)
     if cruce["status"] == "conflict":
+        print(f"[ERROR - EDITAR CURSO] Ocurrió un error al actualizar el curso '{course.asignatura}' (ID: {curso_id}). Motivo: {cruce['detail']}")
         raise HTTPException(status_code=400, detail=cruce["detail"])
 
     old_docente_id = curso_previo.get("docenteId")
@@ -303,6 +309,7 @@ def editar_curso(curso_id: str, course: CourseCreate):
         save_db(db)
 
     sincronizar_cursos_asignados_docente(curso_id, course.docenteId, old_docente_id)
+    print(f"[OK - EDITAR CURSO] Curso '{course.asignatura}' (ID: {curso_id}, Docente: {course.docente}) actualizado correctamente.")
 
     return {"mensaje": "Curso actualizado exitosamente", "id": curso_id, "curso": course_dict}
 
@@ -336,8 +343,10 @@ def eliminar_curso(curso_id: str):
         save_db(db)
 
     if not found:
+        print(f"[ERROR - ELIMINAR CURSO] Ocurrió un error al eliminar el curso '{curso_id}'. Motivo: Curso no encontrado.")
         raise HTTPException(status_code=404, detail="Curso no encontrado")
 
+    print(f"[OK - ELIMINAR CURSO] Curso '{curso_id}' eliminado lógicamente (Inactivo) correctamente.")
     return {"mensaje": "Curso eliminado lógicamente", "id": curso_id}
 
 

@@ -320,11 +320,14 @@ def validar_datos_usuario(req: ValidationCheckRequest):
             errores["correo"] = "El correo electrónico no es válido."
 
     if errores:
+        motivo = "; ".join([f"{k}: {v}" for k, v in errores.items()])
+        print(f"[ERROR - VALIDACIÓN USUARIO] Ocurrió un error al validar los datos del usuario (DNI: {req.dni}, Correo: {req.correo}). Motivo: {motivo}")
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"mensaje": "Error de validación en campos del usuario", "errores": errores},
         )
 
+    print(f"[OK - VALIDACIÓN USUARIO] Datos de usuario validados correctamente (Documento: {req.tipoDocumento or 'DNI'} {req.dni}, Celular: {req.celular or 'N/A'}).")
     return {"valido": True, "mensaje": "Validación exitosa: documento y número telefónico conformes"}
 
 
@@ -332,13 +335,20 @@ def validar_datos_usuario(req: ValidationCheckRequest):
 
 @router.post("/login", tags=["Autenticación"])
 def login(form_data: UserLogin):
-    auth_session = authenticate_with_insforge(
-        form_data.correo.strip().lower(),
-        form_data.password,
-    )
+    correo_clean = form_data.correo.strip().lower()
+    try:
+        auth_session = authenticate_with_insforge(
+            correo_clean,
+            form_data.password,
+        )
+    except HTTPException as exc:
+        print(f"[ERROR - LOGIN] Ocurrió un error al iniciar sesión para '{correo_clean}'. Motivo: {exc.detail}")
+        raise
+
     auth_user = auth_session.get("user")
     access_token = auth_session.get("accessToken")
     if not isinstance(auth_user, dict) or not access_token or not auth_user.get("id"):
+        print(f"[ERROR - LOGIN] InsForge Auth no devolvió una sesión válida para '{correo_clean}'.")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="InsForge Auth no devolvió una sesión válida.",
@@ -346,22 +356,26 @@ def login(form_data: UserLogin):
 
     user = get_profile_by_auth_id(str(auth_user["id"]))
     if user is None:
+        print(f"[ERROR - LOGIN] La cuenta '{correo_clean}' (auth_id={auth_user['id']}) no tiene perfil en public.users.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="La cuenta de Auth no tiene un perfil registrado en users.",
         )
 
     if str(user.get("estado", "Activo")).strip().lower() != "activo":
+        print(f"[ERROR - LOGIN] Acceso denegado para '{correo_clean}'. Motivo: La cuenta se encuentra inactiva.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="La cuenta se encuentra inactiva",
         )
 
+    full_name = f"{user['nombres']} {user['apellidos']}".strip()
+    print(f"[OK - LOGIN] Usuario '{full_name}' ({correo_clean}, Rol: {user['rol']}) inició sesión correctamente.")
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "role": user["rol"],
-        "name": f"{user['nombres']} {user['apellidos']}",
+        "name": full_name,
         "userId": user["id"],
         "id": user["id"],
         "email": user.get("correo"),
@@ -483,6 +497,7 @@ def crear_usuario(
                 (user_dict["correo"], user_dict["dni"], auth_user_id),
             )
             if fetch_one_as_dict(cur):
+                print(f"[ERROR - CREAR USUARIO] Ocurrió un error al registrar al usuario '{user_dict['nombres']} {user_dict['apellidos']}'. Motivo: Ya existe un perfil con el correo '{user_dict['correo']}', DNI '{user_dict['dni']}' o auth_user_id '{auth_user_id}'.")
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Ya existe un perfil con ese correo, documento o cuenta de Auth.",
@@ -570,6 +585,7 @@ def crear_usuario(
                 "cursosInscritos": parse_course_list(created.get("cursosInscritos") or user_dict.get("cursosInscritos")),
             }
             normalized_user = UsuarioResponse.model_validate(full_created).model_dump()
+            print(f"[OK - CREAR USUARIO] Usuario '{normalized_user['nombres']} {normalized_user['apellidos']}' (ID: {normalized_user['id']}, Rol: {normalized_user['rol']}) registrado correctamente.")
             return {
                 **normalized_user,
                 "mensaje": "Perfil de usuario creado correctamente.",
@@ -581,7 +597,7 @@ def crear_usuario(
     except Exception as exc:
         conn.rollback()
         err_msg = str(exc)
-        print(f"[Usuarios] Error guardando perfil: {err_msg}")
+        print(f"[ERROR - CREAR USUARIO] Ocurrió un error al registrar al usuario '{user_dict.get('nombres')} {user_dict.get('apellidos')}'. Motivo: {err_msg}")
         if "check_users_dni" in err_msg:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -650,16 +666,19 @@ def actualizar_usuario(identificador: str, user_data: UserUpdate):
                     conn.commit()
 
                 normalized = UsuarioResponse.model_validate({**user, **update_data, **updated_row}).model_dump()
+                print(f"[OK - ACTUALIZAR USUARIO] Usuario '{normalized['nombres']} {normalized['apellidos']}' (ID: {normalized['id']}) actualizado correctamente.")
                 return {
                     **normalized,
                     "mensaje": "Usuario actualizado correctamente",
                     "usuario": normalized,
                 }
-        except HTTPException:
+        except HTTPException as http_exc:
+            print(f"[ERROR - ACTUALIZAR USUARIO] Ocurrió un error al actualizar el usuario '{identificador}'. Motivo: {http_exc.detail}")
             raise
         except Exception as e:
             conn.rollback()
             err_msg = str(e)
+            print(f"[ERROR - ACTUALIZAR USUARIO] Ocurrió un error al actualizar el usuario '{identificador}'. Motivo: {err_msg}")
             if "check_users_dni" in err_msg:
                 raise HTTPException(status_code=422, detail="Error DB: El documento no cumple el formato válido")
             if "check_users_celular" in err_msg:
@@ -672,11 +691,13 @@ def actualizar_usuario(identificador: str, user_data: UserUpdate):
     users = db.get("users", [])
     user = next((u for u in users if u.get("correo") == identificador or u.get("id") == identificador), None)
     if not user:
+        print(f"[ERROR - ACTUALIZAR USUARIO] Ocurrió un error al actualizar el usuario '{identificador}'. Motivo: Usuario no encontrado.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     for key, value in update_data.items():
         user[key] = value
     save_db(db)
     normalized = UsuarioResponse.model_validate(user).model_dump()
+    print(f"[OK - ACTUALIZAR USUARIO] Usuario '{normalized['nombres']} {normalized['apellidos']}' (ID: {normalized['id']}) actualizado correctamente (modo local).")
     return {
         **normalized,
         "mensaje": "Usuario actualizado correctamente (modo local)",
@@ -719,15 +740,17 @@ def eliminar_usuario(identificador: str):
                         print(f"[Eliminar Usuario] No se pudo eliminar de auth.users por email: {e_auth}")
 
                 conn.commit()
+                print(f"[OK - ELIMINAR USUARIO] Usuario '{user_email}' (ID: {user_id}) eliminado correctamente de la base de datos y de Auth.")
                 return {
                     "mensaje": f"Usuario {user_id} eliminado correctamente de la base de datos y de Auth",
                     "id": user_id,
                 }
-        except HTTPException:
+        except HTTPException as http_exc:
+            print(f"[ERROR - ELIMINAR USUARIO] Ocurrió un error al eliminar al usuario '{identificador}'. Motivo: {http_exc.detail}")
             raise
         except Exception as e:
             conn.rollback()
-            print(f"[Eliminar Usuario] Error en Postgres: {e}")
+            print(f"[ERROR - ELIMINAR USUARIO] Ocurrió un error al eliminar al usuario '{identificador}'. Motivo: {e}")
             raise HTTPException(status_code=500, detail="No se pudo eliminar el usuario en la base de datos.")
         finally:
             conn.close()
@@ -736,7 +759,9 @@ def eliminar_usuario(identificador: str):
     users = db.get("users", [])
     user_to_delete = next((u for u in users if u.get("correo") == identificador or u.get("id") == identificador), None)
     if not user_to_delete:
+        print(f"[ERROR - ELIMINAR USUARIO] Ocurrió un error al eliminar al usuario '{identificador}'. Motivo: Usuario no encontrado.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     db["users"] = [u for u in users if u.get("correo") != identificador and u.get("id") != identificador]
     save_db(db)
+    print(f"[OK - ELIMINAR USUARIO] Usuario '{user_to_delete.get('nombres', '')} {user_to_delete.get('apellidos', '')}' (ID: {user_to_delete.get('id')}) eliminado correctamente (modo local).")
     return {"mensaje": "Usuario eliminado correctamente (modo local)", "id": user_to_delete.get("id")}

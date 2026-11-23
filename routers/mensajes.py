@@ -169,6 +169,7 @@ def enviar_mensaje(mensaje_data: MensajeCreate):
     except Exception as e:
         print(f"[Mensajes] Error al guardar en db.json: {e}")
 
+    print(f"[OK - ENVIAR MENSAJE] Consulta '{clean_id}' de '{payload['estudiante_nombre']}' para '{payload['destinatario_nombre']}' (Curso: {payload['curso']}) registrada correctamente.")
     return payload
 
 
@@ -226,4 +227,5 @@ def responder_mensaje(mensaje_id: str, respuesta_data: RespuestaCreate):
     except Exception as e:
         print(f"[Mensajes] Error actualizando db.json: {e}")
 
+    print(f"[OK - RESPONDER MENSAJE] Respuesta a la consulta '{mensaje_id}' registrada correctamente por '{doc_nombre or 'Docente'}'.")
     return {"mensaje": "Respuesta enviada con éxito.", "id": mensaje_id, "estado": "Respondido"}

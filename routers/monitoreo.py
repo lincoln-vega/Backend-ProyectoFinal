@@ -159,15 +159,20 @@ def verificar_cruce_virtual(nuevo_curso: dict, cursos_existentes: list) -> Dict[
 @router.post("/validar-curso")
 def evaluar_nuevo_curso(curso: dict, current_user: dict = Depends(require_role(["admin", "docente"]))):
     cursos_existentes = obtener_cursos_para_validacion()
+    nombre_curso = curso.get("asignatura", "Sin nombre")
+    docente_curso = curso.get("docente") or curso.get("docenteId") or "Sin docente"
 
     try:
         resultado = verificar_cruce_virtual(curso, cursos_existentes)
     except ValueError as e:
+        print(f"[ERROR - VALIDAR CURSO] Ocurrió un error al validar el horario del curso '{nombre_curso}'. Motivo: {e}")
         raise HTTPException(status_code=422, detail=str(e))
 
     if resultado["status"] == "conflict":
+        print(f"[ERROR - CRUCE DE HORARIO] Ocurrió un error al validar el curso '{nombre_curso}' para el docente '{docente_curso}'. Motivo: {resultado['detail']}")
         raise HTTPException(status_code=400, detail=resultado["detail"])
 
+    print(f"[OK - VALIDAR CURSO] Curso '{nombre_curso}' (Docente: {docente_curso}) validado correctamente sin cruces de horario.")
     return {
         "valido": True,
         "cruce": False,
