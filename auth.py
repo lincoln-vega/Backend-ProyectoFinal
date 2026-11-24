@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -8,6 +9,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from database import DATABASE_URL, fetch_one_as_dict, get_pg_connection
 
 security = HTTPBearer(auto_error=False)
+
+# Cache en memoria con TTL de 60 segundos para evitar llamadas HTTP redundantes a InsForge en cada request
+_SESSION_CACHE: Dict[str, Dict[str, Any]] = {}
+_SESSION_CACHE_TTL = 60  # segundos
 
 
 def _insforge_host() -> str:
@@ -102,10 +107,18 @@ def get_current_identity(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    token = credentials.credentials.strip()
+    now = time.time()
+
+    # Validación rápida en caché local para reducir latencia de red
+    cached = _SESSION_CACHE.get(token)
+    if cached and (now - cached["timestamp"] < _SESSION_CACHE_TTL):
+        return cached["identity"]
+
     try:
         response = httpx.get(
             f"{_insforge_host()}/api/auth/sessions/current",
-            headers={"Authorization": f"Bearer {credentials.credentials}"},
+            headers={"Authorization": f"Bearer {token}"},
             timeout=10.0,
         )
     except httpx.RequestError as exc:
@@ -115,6 +128,7 @@ def get_current_identity(
         ) from exc
 
     if response.status_code in (401, 403):
+        _SESSION_CACHE.pop(token, None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="La sesión de InsForge no es válida o expiró.",
@@ -139,7 +153,10 @@ def get_current_identity(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="La sesión no contiene una identidad de usuario válida.",
         )
-    return {"id": str(user["id"]), "email": str(user["email"]).strip().lower()}
+
+    identity = {"id": str(user["id"]), "email": str(user["email"]).strip().lower()}
+    _SESSION_CACHE[token] = {"identity": identity, "timestamp": now}
+    return identity
 
 
 def get_current_user(
@@ -152,6 +169,18 @@ def get_current_user(
             detail="La cuenta de Auth no tiene un perfil registrado en users.",
         )
     return profile
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Optional[Dict[str, Any]]:
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        identity = get_current_identity(credentials)
+        return get_current_user(identity)
+    except Exception:
+        return None
 
 
 def require_role(allowed_roles: List[str]):

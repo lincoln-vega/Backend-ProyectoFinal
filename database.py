@@ -25,7 +25,7 @@ def get_pg_connection():
         conn = psycopg2.connect(DATABASE_URL)
         return conn
     except Exception as e:
-        print(f"[Database] Error conectando a PostgreSQL: {e}")
+        print(f"[CRITICAL - Database] Error conectando a PostgreSQL en InsForge: {e}")
         return None
 
 def load_db():

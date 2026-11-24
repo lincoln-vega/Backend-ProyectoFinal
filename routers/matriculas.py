@@ -58,10 +58,12 @@ def sincronizar_cursos_estudiante(
     dni: Optional[str],
     correo: Optional[str],
     nuevos_cursos: Optional[List[str]],
+    external_conn=None,
 ) -> List[str]:
     """
     Actualiza automáticamente la columna cursosInscritos del estudiante en public.users
     (y en db.json) haciendo unión sin duplicados con los cursos que ya tuviera inscritos.
+    Soporta recibir una conexión externa activa para transacciones atómicas.
     """
     if not nuevos_cursos:
         return []
@@ -72,7 +74,12 @@ def sincronizar_cursos_estudiante(
 
     merged: List[str] = list(dict.fromkeys(clean_new))
 
-    conn = get_pg_connection()
+    should_close = False
+    conn = external_conn
+    if conn is None:
+        conn = get_pg_connection()
+        should_close = True
+
     if conn:
         try:
             with conn.cursor() as cur:
@@ -100,12 +107,17 @@ def sincronizar_cursos_estudiante(
                             'UPDATE users SET "cursosInscritos" = %s::jsonb WHERE id = %s;',
                             (json.dumps(merged), row["id"]),
                         )
-                        conn.commit()
+                        if should_close:
+                            conn.commit()
         except Exception as e:
-            conn.rollback()
+            if should_close:
+                conn.rollback()
             print(f"[Matriculas] Advertencia al sincronizar cursosInscritos en Postgres: {e}")
+            if not should_close:
+                raise
         finally:
-            conn.close()
+            if should_close:
+                conn.close()
 
     # Sincronizar también en db.json
     try:
@@ -161,7 +173,7 @@ def listar_matriculas():
 
 @router.post("/", dependencies=[Depends(require_role(["admin"]))], status_code=status.HTTP_201_CREATED)
 def crear_matricula(matricula: MatriculaCreate):
-    """Permite al Administrador registrar una nueva matrícula y sincronizar cursosInscritos del estudiante."""
+    """Permite al Administrador registrar una nueva matrícula y sincronizar cursosInscritos del estudiante de forma atómica."""
     db = load_db()
     if "matriculas" not in db:
         db["matriculas"] = []
@@ -171,6 +183,7 @@ def crear_matricula(matricula: MatriculaCreate):
         raise HTTPException(status_code=400, detail="El ID de matrícula ya existe")
 
     conn = get_pg_connection()
+    cursos_actualizados = []
     if conn:
         try:
             with conn.cursor() as cur:
@@ -206,29 +219,42 @@ def crear_matricula(matricula: MatriculaCreate):
                         matricula.estado,
                     ),
                 )
+
+                # Transacción atómica: sincronizar cursos del alumno en la misma conexión
+                if matricula.cursosInscritos is not None:
+                    cursos_actualizados = sincronizar_cursos_estudiante(
+                        matricula.estudianteId,
+                        matricula.dni,
+                        matricula.correo,
+                        matricula.cursosInscritos,
+                        external_conn=conn,
+                    )
+
                 conn.commit()
         except HTTPException:
             conn.rollback()
             raise
         except Exception as e:
             conn.rollback()
-            print(f"[Matriculas] Advertencia al insertar matrícula en Postgres: {e}")
+            print(f"[Matriculas] Error al insertar matrícula atómica en Postgres: {e}")
+            raise HTTPException(status_code=500, detail=f"Error en base de datos al registrar matrícula: {e}")
         finally:
             conn.close()
+    else:
+        # Fallback cuando PostgreSQL no está disponible
+        if matricula.cursosInscritos is not None:
+            cursos_actualizados = sincronizar_cursos_estudiante(
+                matricula.estudianteId,
+                matricula.dni,
+                matricula.correo,
+                matricula.cursosInscritos,
+            )
 
     mat_dict = matricula.model_dump()
+    if cursos_actualizados:
+        mat_dict["cursosInscritos"] = cursos_actualizados
     db["matriculas"].append(mat_dict)
     save_db(db)
-
-    cursos_actualizados = []
-    if matricula.cursosInscritos is not None:
-        cursos_actualizados = sincronizar_cursos_estudiante(
-            matricula.estudianteId,
-            matricula.dni,
-            matricula.correo,
-            matricula.cursosInscritos,
-        )
-        mat_dict["cursosInscritos"] = cursos_actualizados
 
     print(f"[OK - CREAR MATRÍCULA] Matrícula '{matricula.id}' del estudiante '{matricula.estudiante}' (Programa: {matricula.programa}) registrada correctamente.")
     return {
@@ -269,7 +295,7 @@ def listar_pagos():
 
 @router.post("/pagos", dependencies=[Depends(require_role(["admin"]))], status_code=status.HTTP_201_CREATED)
 def registrar_pago(pago: PagoCreate):
-    """Registra un nuevo pago y actualiza el saldo de la matrícula asociada."""
+    """Registra un nuevo pago y actualiza el saldo de la matrícula asociada de forma atómica."""
     db = load_db()
     if "pagos" not in db:
         db["pagos"] = []
@@ -283,8 +309,13 @@ def registrar_pago(pago: PagoCreate):
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute('SELECT * FROM matriculas WHERE id = %s LIMIT 1;', (pago.matriculaId,))
+                # Bloqueo a nivel de fila (FOR UPDATE) para prevenir condiciones de carrera
+                cur.execute('SELECT * FROM matriculas WHERE id = %s FOR UPDATE;', (pago.matriculaId,))
                 pg_mat = fetch_one_as_dict(cur)
+                if not pg_mat and not matricula:
+                    print(f"[ERROR - REGISTRAR PAGO] Ocurrió un error al registrar el pago '{pago.id}' de '{pago.estudiante}'. Motivo: Matrícula asociada '{pago.matriculaId}' no encontrada.")
+                    raise HTTPException(status_code=404, detail="Matrícula asociada no encontrada")
+
                 if pg_mat:
                     nuevo_pagado = float(pg_mat.get("montoPagado") or 0) + pago.monto
                     nuevo_saldo = max(0.0, float(pg_mat.get("montoTotal") or 0) - nuevo_pagado)
@@ -320,9 +351,13 @@ def registrar_pago(pago: PagoCreate):
                         ),
                     )
                     conn.commit()
+        except HTTPException:
+            conn.rollback()
+            raise
         except Exception as e:
             conn.rollback()
-            print(f"[Pagos] Advertencia al registrar pago en Postgres: {e}")
+            print(f"[Pagos] Error al registrar pago atómico en Postgres: {e}")
+            raise HTTPException(status_code=500, detail=f"Error en base de datos al registrar pago: {e}")
         finally:
             conn.close()
 

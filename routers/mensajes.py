@@ -1,8 +1,9 @@
 import time
-from typing import Optional, List
-from fastapi import APIRouter, HTTPException, status, Query
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, HTTPException, status, Query, Depends
 from pydantic import BaseModel, Field, ConfigDict
 from database import load_db, save_db, get_pg_connection, fetch_all_as_dict
+from auth import get_optional_user
 
 router = APIRouter(prefix="/mensajes", tags=["Mensajería y Consultas Académicas"])
 
@@ -38,15 +39,21 @@ class RespuestaCreate(BaseModel):
 def listar_mensajes(
     docente_id: Optional[str] = Query(None, alias="docenteId"),
     estudiante_correo: Optional[str] = Query(None, alias="estudianteCorreo"),
-    curso_id: Optional[str] = Query(None, alias="cursoId")
+    curso_id: Optional[str] = Query(None, alias="cursoId"),
+    current_user: Optional[Dict[str, Any]] = Depends(get_optional_user),
 ):
     """
     Retorna la lista de consultas o mensajes académicos.
     Permite filtrar opcionalmente por docente_id, estudiante_correo o curso_id.
+    Si el usuario autenticado es un estudiante, restringe la consulta a sus propios mensajes.
     """
     d_id = docente_id if isinstance(docente_id, str) and docente_id.strip() else None
     e_correo = estudiante_correo if isinstance(estudiante_correo, str) and estudiante_correo.strip() else None
     c_id = curso_id if isinstance(curso_id, str) and curso_id.strip() else None
+
+    # Si es estudiante autenticado, no permitir consultar mensajes ajenos
+    if current_user and str(current_user.get("rol", "")).casefold() == "estudiante":
+        e_correo = current_user.get("correo") or e_correo
 
     conn = get_pg_connection()
     if conn:
@@ -96,11 +103,25 @@ def listar_mensajes(
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def enviar_mensaje(mensaje_data: MensajeCreate):
+def enviar_mensaje(
+    mensaje_data: MensajeCreate,
+    current_user: Optional[Dict[str, Any]] = Depends(get_optional_user),
+):
     """
     Registra una nueva consulta de un estudiante hacia un docente o compañero.
+    Valida la autoría real contra el token para evitar ID Spoofing.
     Persiste en PostgreSQL y sincroniza con db.json.
     """
+    # Si el usuario es un estudiante autenticado, asegurar que el remitente coincida con su identidad real
+    if current_user and str(current_user.get("rol", "")).casefold() == "estudiante":
+        if current_user.get("id"):
+            mensaje_data.estudiante_id = current_user["id"]
+        if current_user.get("correo"):
+            mensaje_data.estudiante_correo = current_user["correo"]
+        nombre_real = f"{current_user.get('nombres', '')} {current_user.get('apellidos', '')}".strip()
+        if nombre_real:
+            mensaje_data.estudiante_nombre = nombre_real
+
     clean_id = mensaje_data.id or f"MSG-{int(time.time() * 1000)}"
     fecha_actual = mensaje_data.fecha or f"Hoy, {time.strftime('%I:%M %p')}"
 
@@ -174,10 +195,27 @@ def enviar_mensaje(mensaje_data: MensajeCreate):
 
 
 @router.patch("/{mensaje_id}/respuesta")
-def responder_mensaje(mensaje_id: str, respuesta_data: RespuestaCreate):
+def responder_mensaje(
+    mensaje_id: str,
+    respuesta_data: RespuestaCreate,
+    current_user: Optional[Dict[str, Any]] = Depends(get_optional_user),
+):
     """
     Permite al docente responder una consulta y cambiar su estado a 'Respondido'.
+    Valida que los estudiantes no puedan responder consultas y fija la identidad del docente.
     """
+    if current_user:
+        rol = str(current_user.get("rol", "")).casefold()
+        if rol == "estudiante":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Los estudiantes no tienen permisos para responder consultas académicas.",
+            )
+        if rol == "docente":
+            doc_nombre_real = f"{current_user.get('nombres', '')} {current_user.get('apellidos', '')}".strip()
+            if doc_nombre_real:
+                respuesta_data.docente_nombre = doc_nombre_real
+
     fecha_respuesta = f"Hoy, {time.strftime('%I:%M %p')}"
     resp_texto = respuesta_data.respuesta.strip()
     doc_nombre = respuesta_data.docente_nombre

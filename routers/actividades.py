@@ -88,10 +88,22 @@ def listar_tareas(curso_id: Optional[str] = None):
     return tareas
 
 @router_tareas.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(["admin", "docente"]))])
-def crear_tarea(tarea: TareaCreate):
+def crear_tarea(
+    tarea: TareaCreate,
+    current_user: dict = Depends(require_role(["admin", "docente"])),
+):
     """
     Crea una nueva tarea académica tanto en PostgreSQL como en db.json.
+    Valida la autoría real del docente autenticado.
     """
+    # Si quien crea es docente, forzar su identidad real
+    if str(current_user.get("rol", "")).casefold() == "docente":
+        if current_user.get("id"):
+            tarea.docente_id = current_user["id"]
+        nombre_completo = f"{current_user.get('nombres', '')} {current_user.get('apellidos', '')}".strip()
+        if nombre_completo:
+            tarea.docente = nombre_completo
+
     tarea_id = tarea.id or f"TSK-{int(time.time() * 1000) % 1000000}"
     
     # 1. Guardar en PostgreSQL
@@ -279,10 +291,22 @@ def listar_anuncios(curso_id: Optional[str] = None):
     return anuncios
 
 @router_anuncios.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(["admin", "docente"]))])
-def crear_anuncio(anuncio: AnuncioCreate):
+def crear_anuncio(
+    anuncio: AnuncioCreate,
+    current_user: dict = Depends(require_role(["admin", "docente"])),
+):
     """
     Publica un nuevo anuncio o comunicado académico.
+    Valida la autoría real del docente autenticado.
     """
+    # Si quien publica es docente, forzar su identidad real
+    if str(current_user.get("rol", "")).casefold() == "docente":
+        if current_user.get("id"):
+            anuncio.docente_id = current_user["id"]
+        nombre_completo = f"{current_user.get('nombres', '')} {current_user.get('apellidos', '')}".strip()
+        if nombre_completo:
+            anuncio.docente = nombre_completo
+
     anuncio_id = anuncio.id or f"ANN-{int(time.time() * 1000) % 1000000}"
 
     # 1. Guardar en PostgreSQL

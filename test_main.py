@@ -1,7 +1,7 @@
 from fastapi import Request
 from fastapi.testclient import TestClient
 from main import app
-from auth import get_current_identity, get_current_user, require_role
+from auth import get_current_identity, get_current_user, get_optional_user, require_role
 import routers.usuarios as usuarios_router
 
 client = TestClient(app)
@@ -16,14 +16,16 @@ ESTUDIANTE_HEADERS = {"Authorization": f"Bearer {ESTUDIANTE_TOKEN}"}
 DOCENTE_HEADERS = {"Authorization": f"Bearer {DOCENTE_TOKEN}"}
 
 _TEST_USERS = {
-    ADMIN_TOKEN: {"correo": "admin@gmail.com", "rol": "admin", "nombres": "Admin", "apellidos": "Test"},
+    ADMIN_TOKEN: {"id": "USR-001", "correo": "admin@gmail.com", "rol": "admin", "nombres": "Admin", "apellidos": "Test"},
     ESTUDIANTE_TOKEN: {
+        "id": "USR-108",
         "correo": "estudiante@gmail.com",
         "rol": "estudiante",
         "nombres": "Estudiante",
         "apellidos": "Test",
     },
     DOCENTE_TOKEN: {
+        "id": "USR-107",
         "correo": "c.herrera@academia.edu.pe",
         "rol": "docente",
         "nombres": "Docente",
@@ -34,11 +36,20 @@ _TEST_USERS = {
 
 def _test_current_user(request: Request):
     authorization = request.headers.get("Authorization", "")
-    token = authorization.removeprefix("Bearer ")
-    return _TEST_USERS[token]
+    token = authorization.removeprefix("Bearer ").strip()
+    return _TEST_USERS.get(token, _TEST_USERS[ADMIN_TOKEN])
+
+
+def _test_optional_user(request: Request):
+    authorization = request.headers.get("Authorization", "")
+    if not authorization:
+        return None
+    token = authorization.removeprefix("Bearer ").strip()
+    return _TEST_USERS.get(token)
 
 
 app.dependency_overrides[get_current_user] = _test_current_user
+app.dependency_overrides[get_optional_user] = _test_optional_user
 app.dependency_overrides[get_current_identity] = lambda: {
     "id": "00000000-0000-4000-8000-000000000001",
     "email": "demo@example.com",
@@ -826,6 +837,35 @@ def test_endpoint_mensajes_crear_y_responder():
     res_resp = client.patch("/mensajes/MSG-TEST-UNIT-01/respuesta", json=respuesta_payload)
     assert res_resp.status_code == 200
     assert res_resp.json()["estado"] == "Respondido"
+
+
+def test_enviar_mensaje_bloquea_spoofing_de_estudiante():
+    """Valida que un estudiante autenticado no pueda suplantar el ID ni el correo de otro alumno."""
+    msg_spoof = {
+        "id": "MSG-TEST-SPOOF-01",
+        "estudianteId": "USR-999-OTRO",
+        "estudianteNombre": "Otro Alumno",
+        "estudianteCorreo": "otro@alumnos.edu.pe",
+        "docenteId": "USR-107",
+        "docenteNombre": "Prof. Pedro Chavez",
+        "cursoId": "CRS-002",
+        "curso": "Física Fundamental",
+        "mensaje": "Consulta con token de estudiante pero datos en body alterados"
+    }
+    res = client.post("/mensajes/", json=msg_spoof, headers=ESTUDIANTE_HEADERS)
+    assert res.status_code == 201
+    data = res.json()
+    # Debe forzar los datos del estudiante autenticado en lugar de los enviados maliciosamente
+    assert data["estudiante_id"] == "USR-108"
+    assert data["estudiante_correo"] == "estudiante@gmail.com"
+
+
+def test_estudiante_no_puede_responder_mensajes():
+    """Valida que un estudiante no tenga permisos para responder mensajes docentes (403 Forbidden)."""
+    payload = {"respuesta": "Intento de respuesta de estudiante"}
+    res = client.patch("/mensajes/MSG-TEST-UNIT-01/respuesta", json=payload, headers=ESTUDIANTE_HEADERS)
+    assert res.status_code == 403
+
 
 
 
