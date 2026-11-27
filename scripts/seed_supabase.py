@@ -579,3 +579,5 @@ if __name__ == "__main__":
     ensure_buckets()
     users_auth = ensure_auth_users()
     seed_database(users_auth)
+    from seed_demo_pdfs import seed_demo_pdfs
+    seed_demo_pdfs()

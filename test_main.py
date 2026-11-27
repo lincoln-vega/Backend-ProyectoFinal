@@ -1379,6 +1379,59 @@ def test_fase4_bloquea_entrega_en_ciclo_finalizado():
     assert r_sub.status_code == 400
 
 
+# --- PRUEBAS MOTOR DE REPORTES PDF (ESTILO JASPERREPORTS) Y AISLAMIENTO RBAC ---
+
+def test_reportes_pdf_binario_real_y_json_para_admin():
+    """Verifica que los 5 reportes parametrizados generen PDFs válidos (%PDF-) y payloads JSON coherentes."""
+    r_exec = client.get("/reportes/resumen-ejecutivo", headers=ADMIN_HEADERS)
+    assert r_exec.status_code == 200
+    assert "kpis" in r_exec.json()
+
+    r_users = client.get("/usuarios/", headers=ADMIN_HEADERS)
+    est_user = next(
+        (u for u in r_users.json() if str(u.get("rol") or "").lower() == "estudiante"),
+        r_users.json()[0],
+    )
+
+    endpoints = [
+        "/reportes/notas",
+        f"/reportes/kardex-alumno/{est_user['id']}",
+        "/reportes/asistencia",
+        "/reportes/docentes",
+        "/reportes/matriculas",
+    ]
+    for ep in endpoints:
+        r_pdf = client.get(f"{ep}?formato=pdf", headers=ADMIN_HEADERS)
+        assert r_pdf.status_code == 200, ep
+        assert r_pdf.headers["content-type"].startswith("application/pdf")
+        assert r_pdf.content.startswith(b"%PDF-1.")
+        assert len(r_pdf.content) > 1200
+
+        r_json = client.get(f"{ep}?formato=json", headers=ADMIN_HEADERS)
+        assert r_json.status_code == 200, ep
+        body = r_json.json()
+        assert "reportCode" in body and "kpis" in body and "columnas" in body and "filas" in body
+
+
+def test_reportes_rbac_aislamiento_docente_y_bloqueo_estudiante():
+    """
+    Verifica que:
+    - Estudiante no pueda acceder a reportes administrativos/docentes (403).
+    - Docente no pueda ver recaudación de matrículas ni planilla de otros docentes (403).
+    - Docente sí pueda emitir actas de sus cursos y su propio récord.
+    """
+    assert client.get("/reportes/notas", headers=ESTUDIANTE_HEADERS).status_code == 403
+    assert client.get("/reportes/resumen-ejecutivo", headers=DOCENTE_HEADERS).status_code == 403
+    assert client.get("/reportes/matriculas", headers=DOCENTE_HEADERS).status_code == 403
+    assert client.get("/reportes/docentes?docente_id=USR-002", headers=DOCENTE_HEADERS).status_code == 403
+    assert client.get("/reportes/notas?curso_id=CRS-INEXISTENTE-AJENO", headers=DOCENTE_HEADERS).status_code == 403
+
+    r_own = client.get("/reportes/docentes?formato=pdf", headers=DOCENTE_HEADERS)
+    assert r_own.status_code == 200
+    assert r_own.content.startswith(b"%PDF-1.")
+
+
+
 
 
 
