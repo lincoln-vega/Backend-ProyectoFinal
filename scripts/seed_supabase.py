@@ -507,8 +507,9 @@ def seed_database(auth_map: dict):
                     """
                     INSERT INTO tareas (
                         id, curso_id, ciclo_id, curso, tipo, titulo, descripcion,
-                        fecha_limite, puntos, docente_id, docente, estado
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Por entregar')
+                        fecha_limite, puntos, docente_id, docente, estado,
+                        archivo_url, archivo_path, archivo_nombre
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Por entregar', NULL, NULL, NULL)
                     ON CONFLICT (id) DO UPDATE SET titulo = EXCLUDED.titulo, ciclo_id = EXCLUDED.ciclo_id;
                     """,
                     t,

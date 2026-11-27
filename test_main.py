@@ -1182,6 +1182,204 @@ def test_clases_vivo_autocierre_por_olvido_y_material_en_anuncios(monkeypatch):
     assert r_activa.json()["activa"] is None
 
 
+# --- PRUEBAS FASE 4: TAREAS CON ENTREGA INDIVIDUAL REAL Y CALIFICACIÓN DOCENTE (0-20) ---
+
+def test_fase4_rbac_bloquea_estudiante_en_parche_global_y_calificacion():
+    """Un estudiante no puede alterar una tarea global ni ver/calificar entregas de otros."""
+    r_create = client.post(
+        "/tareas/",
+        headers=DOCENTE_HEADERS,
+        json={
+            "cursoId": "CRS-001",
+            "curso": "Álgebra Preuniversitaria",
+            "titulo": "Tarea Protegida RBAC",
+            "fechaLimite": "2026-12-06",
+            "docente": "Docente Test",
+        },
+    )
+    assert r_create.status_code == 201
+    tid = r_create.json()["id"]
+
+    assert client.patch(f"/tareas/{tid}", headers=ESTUDIANTE_HEADERS, json={"estado": "Entregado"}).status_code == 403
+    assert client.get(f"/tareas/{tid}/entregas", headers=ESTUDIANTE_HEADERS).status_code == 403
+    assert (
+        client.patch(
+            f"/tareas/{tid}/calificar/USR-108",
+            headers=ESTUDIANTE_HEADERS,
+            json={"nota": 20, "comentarioDocente": "Auto-nota"},
+        ).status_code
+        == 403
+    )
+
+
+def test_fase4_aislamiento_entregas_dos_alumnos_reemplazo_y_calificacion(monkeypatch):
+    """
+    Verifica que:
+    1) La entrega de Alumno 1 NO afecte el estado de Alumno 2.
+    2) Alumno 1 pueda reemplazar su archivo mientras esté 'Entregado'.
+    3) Docente vea el consolidado, valide rango 0-20, califique con 18.5 y bloquee re-entregas salvo 'Observado'.
+    """
+    est2_token = "test-token-estudiante-dos-f4"
+    monkeypatch.setitem(
+        _TEST_USERS,
+        est2_token,
+        {
+            "id": "USR-F4-EST2",
+            "correo": "alumno2.f4@academia.edu.pe",
+            "rol": "estudiante",
+            "nombres": "Valeria",
+            "apellidos": "Quispe",
+        },
+    )
+    est2_headers = {"Authorization": f"Bearer {est2_token}"}
+
+    # Docente crea tarea con guía PDF adjunta
+    r_task = client.post(
+        "/tareas/",
+        headers=DOCENTE_HEADERS,
+        json={
+            "cursoId": "CRS-001",
+            "curso": "Álgebra Preuniversitaria",
+            "tipo": "Práctica Calificada",
+            "titulo": "Inecuaciones de Grado Superior",
+            "descripcion": "Subir desarrollo completo en PDF.",
+            "fechaLimite": "2026-12-08",
+            "puntos": "20 pts",
+            "docente": "Docente Test",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/materiales-clase/guia.pdf",
+            "archivoPath": "CRS-001/guia_inecuaciones.pdf",
+            "archivoNombre": "Guia_Inecuaciones.pdf",
+        },
+    )
+    assert r_task.status_code == 201
+    tarea_id = r_task.json()["id"]
+    assert r_task.json()["archivoNombre"] == "Guia_Inecuaciones.pdf"
+
+    # Alumno 1 sube su entrega v1
+    r_sub1 = client.post(
+        f"/tareas/{tarea_id}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoPath": "CRS-001/USR-108_v1.pdf",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/v1.pdf",
+            "archivoNombre": "solucion_v1.pdf",
+            "tamanoBytes": 84500,
+            "comentarioAlumno": "Primera versión.",
+        },
+    )
+    assert r_sub1.status_code == 201
+    assert r_sub1.json()["estado"] == "Entregado"
+
+    # Alumno 2 consulta sus entregas -> NO debe figurar entregada para él
+    r_mis_est2 = client.get("/tareas/mis-entregas", headers=est2_headers)
+    assert r_mis_est2.status_code == 200
+    assert all(e["tareaId"] != tarea_id for e in r_mis_est2.json())
+
+    # Alumno 1 corrige su archivo antes de ser calificado (UPSERT sin duplicar filas)
+    r_sub1_v2 = client.post(
+        f"/tareas/{tarea_id}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoPath": "CRS-001/USR-108_v2.pdf",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/v2.pdf",
+            "archivoNombre": "solucion_final_v2.pdf",
+            "tamanoBytes": 120400,
+            "comentarioAlumno": "Versión corregida con el ejercicio 10.",
+        },
+    )
+    assert r_sub1_v2.status_code == 201
+    assert r_sub1_v2.json()["archivoNombre"] == "solucion_final_v2.pdf"
+
+    # Docente consulta bandeja de entregas de la tarea
+    r_bandeja = client.get(f"/tareas/{tarea_id}/entregas", headers=DOCENTE_HEADERS)
+    assert r_bandeja.status_code == 200
+    bandeja = r_bandeja.json()
+    assert bandeja["resumen"]["entregados"] == 1
+    assert bandeja["resumen"]["pendientesCalificar"] == 1
+
+    # Validación de rango vigesimal (0 a 20)
+    r_bad_grade = client.patch(
+        f"/tareas/{tarea_id}/calificar/USR-108",
+        headers=DOCENTE_HEADERS,
+        json={"nota": 24.5, "comentarioDocente": "Nota fuera de escala"},
+    )
+    assert r_bad_grade.status_code == 400
+
+    # Docente califica con 18.5 / 20
+    r_grade = client.patch(
+        f"/tareas/{tarea_id}/calificar/USR-108",
+        headers=DOCENTE_HEADERS,
+        json={
+            "nota": 18.5,
+            "comentarioDocente": "Excelente procedimiento por puntos críticos.",
+            "estado": "Calificado",
+        },
+    )
+    assert r_grade.status_code == 200
+    assert r_grade.json()["nota"] == 18.5
+    assert r_grade.json()["estado"] == "Calificado"
+
+    # Alumno 1 ve su nota real en /tareas/mis-entregas y ya NO puede sobrescribir una tarea calificada
+    r_mis_est1 = client.get("/tareas/mis-entregas", headers=ESTUDIANTE_HEADERS)
+    assert r_mis_est1.status_code == 200
+    mi_entrega = next(e for e in r_mis_est1.json() if e["tareaId"] == tarea_id)
+    assert mi_entrega["nota"] == 18.5
+    assert "puntos críticos" in mi_entrega["comentarioDocente"]
+
+    r_locked = client.post(
+        f"/tareas/{tarea_id}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/v3.pdf",
+            "archivoNombre": "intento_tardio.pdf",
+        },
+    )
+    assert r_locked.status_code == 409
+
+
+def test_fase4_bloquea_entrega_en_ciclo_finalizado():
+    """Impide registrar entregas en tareas pertenecientes a un ciclo académico Finalizado (Modo Historial)."""
+    from database import load_db, save_db
+
+    db = load_db()
+    ciclos = db.setdefault("ciclos_academicos", [])
+    if not any(c.get("id") == "CIC-HIST-F4" for c in ciclos):
+        ciclos.append({
+            "id": "CIC-HIST-F4",
+            "codigo": "VER-HIST-F4",
+            "nombre": "Verano Cerrado F4",
+            "estado": "Finalizado",
+            "es_vigente": False,
+        })
+        save_db(db)
+
+    r_task = client.post(
+        "/tareas/",
+        headers=DOCENTE_HEADERS,
+        json={
+            "cursoId": "CRS-001",
+            "cicloId": "CIC-HIST-F4",
+            "curso": "Álgebra Histórica",
+            "titulo": "Tarea de Ciclo Cerrado",
+            "fechaLimite": "2026-03-01",
+            "docente": "Docente Test",
+        },
+    )
+    assert r_task.status_code == 201
+    tid = r_task.json()["id"]
+
+    r_sub = client.post(
+        f"/tareas/{tid}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/hist.pdf",
+            "archivoNombre": "hist.pdf",
+        },
+    )
+    assert r_sub.status_code == 400
+
+
+
 
 
 
