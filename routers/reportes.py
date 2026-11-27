@@ -643,8 +643,13 @@ def obtener_resumen_ejecutivo(ciclo_id: Optional[str] = None):
     mats = snap["matriculas"]
     if ciclo_id:
         mats = [m for m in mats if str(m.get("ciclo_id") or m.get("cicloId") or "") == str(ciclo_id)]
+    facturado_total = sum(float(m.get("montoTotal") or 0) for m in mats)
     recaudado = sum(float(m.get("montoPagado") or 0) for m in mats)
     pendiente_cobro = sum(float(m.get("saldoPendiente") or 0) for m in mats)
+    if facturado_total <= 0 and (recaudado + pendiente_cobro) > 0:
+        facturado_total = recaudado + pendiente_cobro
+    recaudacion_pct = round((recaudado / facturado_total) * 100, 1) if facturado_total > 0 else 100.0
+
     morosos = [
         {
             "id": m.get("id"),
@@ -656,19 +661,135 @@ def obtener_resumen_ejecutivo(ciclo_id: Optional[str] = None):
         if float(m.get("saldoPendiente") or 0) > 0
     ]
 
+    # Indicadores reales de cursos, evaluaciones, notas y asistencia para el Dashboard Ejecutivo
+    cursos_filtrados = [
+        c for c in snap["courses"]
+        if not ciclo_id or str(c.get("ciclo_id") or c.get("cicloId") or "") == str(ciclo_id)
+    ]
+    cursos_activos = [c for c in cursos_filtrados if str(c.get("estado") or "Activo").lower() == "activo"]
+    curso_ids_set = {str(c.get("id")) for c in cursos_filtrados}
+
+    tareas_pool = [
+        t for t in snap["tareas"]
+        if not ciclo_id or str(t.get("ciclo_id") or "") == str(ciclo_id) or str(t.get("curso_id") or "") in curso_ids_set
+    ]
+    tarea_ids_set = {str(t.get("id")) for t in tareas_pool}
+    entregas_pool = [
+        e for e in snap["entregas"]
+        if str(e.get("tarea_id") or e.get("tareaId") or "") in tarea_ids_set
+    ]
+    entregas_calificadas = [e for e in entregas_pool if e.get("estado") == "Calificado"]
+    entregas_por_calificar = [e for e in entregas_pool if e.get("estado") in ("Entregado", "Observado")]
+    notas_vals = [float(e["nota"]) for e in entregas_pool if e.get("nota") is not None]
+    promedio_notas = round(sum(notas_vals) / len(notas_vals), 2) if notas_vals else 0.0
+    revision_tareas_pct = (
+        round((len(entregas_calificadas) / len(entregas_pool)) * 100, 1)
+        if entregas_pool else 100.0
+    )
+
+    sesiones_cerradas = [
+        s for s in snap["sesiones"]
+        if s.get("estado") == "FINALIZADA"
+        and (not ciclo_id or str(s.get("ciclo_id") or "") == str(ciclo_id) or str(s.get("curso_id") or "") in curso_ids_set)
+    ]
+    sesion_ids_set = {str(s.get("id")) for s in sesiones_cerradas}
+    asist_pool = [a for a in snap["asistencias"] if str(a.get("sesion_id") or "") in sesion_ids_set]
+    asist_positivas = [
+        a for a in asist_pool
+        if a.get("estado") in ("Presente", "Tardanza", "Justificado")
+    ]
+    asistencia_pct = (
+        round((len(asist_positivas) / len(asist_pool)) * 100, 1)
+        if asist_pool else 100.0
+    )
+
+    total_incidencias = len(snap["incidents"])
+    resueltas_inc = max(0, total_incidencias - len(incidencias_pend))
+    resolucion_inc_pct = (
+        round((resueltas_inc / total_incidencias) * 100, 1)
+        if total_incidencias > 0 else 100.0
+    )
+
+    # Distribución real por Ciclo Académico (para barras comparativas)
+    max_cursos_ciclo = max(
+        [
+            sum(1 for c in snap["courses"] if str(c.get("ciclo_id") or "") == str(ci.get("id")))
+            for ci in ciclos
+        ] + [1]
+    )
+    distribucion_ciclos = []
+    for ci in ciclos:
+        cid_ci = str(ci.get("id"))
+        c_count = sum(1 for c in snap["courses"] if str(c.get("ciclo_id") or "") == cid_ci)
+        m_count = sum(1 for m in snap["matriculas"] if str(m.get("ciclo_id") or m.get("cicloId") or "") == cid_ci)
+        rec_ci = sum(
+            float(m.get("montoPagado") or 0)
+            for m in snap["matriculas"]
+            if str(m.get("ciclo_id") or m.get("cicloId") or "") == cid_ci
+        )
+        distribucion_ciclos.append({
+            "id": cid_ci,
+            "nombre": ci.get("nombre") or cid_ci,
+            "estado": ci.get("estado") or "En Curso",
+            "esVigente": bool(ci.get("es_vigente")),
+            "cursosCount": c_count,
+            "matriculasCount": m_count,
+            "recaudado": round(rec_ci, 2),
+            "barPct": round((c_count / max_cursos_ciclo) * 100, 1),
+        })
+
+    # Distribución de postulantes activos por Área / Carrera Objetivo
+    areas_counter: Dict[str, int] = {}
+    for est in estudiantes:
+        area_lbl = (est.get("areaAcademica") or est.get("carreraObjetivo") or "Preuniversitario General").strip()
+        areas_counter[area_lbl] = areas_counter.get(area_lbl, 0) + 1
+    total_est = max(1, len(estudiantes))
+    distribucion_areas = [
+        {
+            "area": k,
+            "estudiantesCount": v,
+            "porcentaje": round((v / total_est) * 100, 1),
+        }
+        for k, v in sorted(areas_counter.items(), key=lambda x: x[1], reverse=True)[:5]
+    ]
+
     return {
         "cicloVigente": ciclo_vigente_nombre,
         "cicloVigenteId": (vigente_obj or {}).get("id"),
+        "institucion": {
+            "nombre": snap["config"].get("institucion_nombre") or DEFAULT_CONFIG["institucion_nombre"],
+            "ruc": snap["config"].get("institucion_ruc") or DEFAULT_CONFIG["institucion_ruc"],
+            "tarifaHoraDocente": float(snap["config"].get("tarifa_hora_docente") or 50.0),
+        },
         "ciclos": ciclos,
         "kpis": {
+            "usuariosTotales": len(users),
             "estudiantesActivos": len(estudiantes),
             "docentesActivos": len(docentes),
+            "cursosActivos": len(cursos_activos),
+            "cursosTotales": len(cursos_filtrados),
             "clasesEnVivoCount": len(clases_en_vivo),
+            "sesionesCerradasCount": len(sesiones_cerradas),
             "incidenciasPendientesCount": len(incidencias_pend),
+            "incidenciasTotalesCount": total_incidencias,
+            "matriculasCount": len(mats),
+            "facturadoTotal": round(facturado_total, 2),
             "recaudacionTotal": round(recaudado, 2),
             "saldoPendienteTotal": round(pendiente_cobro, 2),
             "cuentasConSaldoCount": len(morosos),
+            "tareasPublicadasCount": len(tareas_pool),
+            "entregasTotalesCount": len(entregas_pool),
+            "entregasPorCalificarCount": len(entregas_por_calificar),
+            "promedioGeneralNotas": promedio_notas,
         },
+        "indicadoresPorcentuales": {
+            "recaudacionPct": recaudacion_pct,
+            "asistenciaEstudiantilPct": asistencia_pct,
+            "revisionTareasPct": revision_tareas_pct,
+            "resolucionIncidenciasPct": resolucion_inc_pct,
+        },
+        "distribucionCiclos": distribucion_ciclos,
+        "distribucionAreas": distribucion_areas,
         "clasesEnVivo": clases_en_vivo,
         "incidenciasPendientes": incidencias_pend[:6],
         "cuentasPorCobrar": morosos[:5],
