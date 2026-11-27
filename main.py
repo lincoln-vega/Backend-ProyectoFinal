@@ -1,14 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import usuarios, horarios, asistencia, monitoreo, matriculas, incidencias, academicos, actividades, mensajes
-
-app = FastAPI(
-    title="API Backend - Academia SCRM", 
-    version="2.0",
-    description="Backend modularizado con FastAPI y control de roles (RBAC)"
+from database import check_pg_health
+from routers import (
+    usuarios,
+    horarios,
+    asistencia,
+    monitoreo,
+    matriculas,
+    incidencias,
+    academicos,
+    actividades,
+    mensajes,
+    configuracion,
+    storage,
 )
 
-# Configuración de CORS
+app = FastAPI(
+    title="API Backend - Academia Preuniversitaria Virtual",
+    version="2.1.0",
+    description="Backend FastAPI unificado con Supabase (PostgreSQL, Auth y Storage) y control de roles RBAC",
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,7 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Registrar los módulos (Routers)
 app.include_router(usuarios.router)
 app.include_router(horarios.router)
 app.include_router(asistencia.router)
@@ -28,7 +39,20 @@ app.include_router(academicos.router)
 app.include_router(actividades.router_tareas)
 app.include_router(actividades.router_anuncios)
 app.include_router(mensajes.router)
-# Ruta raíz para verificar que el servidor enciende
+app.include_router(configuracion.router)
+app.include_router(storage.router)
+
+
 @app.get("/")
 def read_root():
-    return {"mensaje": "Bienvenido al Backend de Academia SCRM", "version": "2.0"}
+    return {
+        "mensaje": "Bienvenido al Backend de Academia Preuniversitaria Virtual",
+        "version": "2.1.0",
+        "provider": "supabase",
+    }
+
+
+@app.get("/health/db", tags=["Diagnóstico"])
+def health_db():
+    """Keep-alive SQL para evitar la pausa por inactividad de 7 días en Supabase Free."""
+    return check_pg_health()

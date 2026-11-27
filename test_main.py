@@ -1,3 +1,6 @@
+import os
+os.environ["TESTING"] = "1"
+
 from fastapi import Request
 from fastapi.testclient import TestClient
 from main import app
@@ -865,6 +868,100 @@ def test_estudiante_no_puede_responder_mensajes():
     payload = {"respuesta": "Intento de respuesta de estudiante"}
     res = client.patch("/mensajes/MSG-TEST-UNIT-01/respuesta", json=payload, headers=ESTUDIANTE_HEADERS)
     assert res.status_code == 403
+
+
+# --- PRUEBAS FASE 1: MIGRACIÓN SUPABASE (HEALTH, CONFIGURACIÓN, AUDITORÍA MEET Y STORAGE) ---
+
+def test_health_db_endpoint():
+    """Valida que el endpoint de keep-alive /health/db responda 200."""
+    res = client.get("/health/db")
+    assert res.status_code == 200
+    assert "connected" in res.json()
+
+
+def test_configuracion_lectura_y_escritura_solo_admin():
+    """Valida lectura de configuración institucional y restricción de edición solo a Admin."""
+    res_get = client.get("/configuracion", headers=ESTUDIANTE_HEADERS)
+    assert res_get.status_code == 200
+    assert "institucion_nombre" in res_get.json()
+
+    res_forbidden = client.put(
+        "/configuracion",
+        json={"institucion_nombre": "Intento No Autorizado"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert res_forbidden.status_code == 403
+
+    res_ok = client.put(
+        "/configuracion",
+        json={"institucion_nombre": "Academia Preuniversitaria Alto Rendimiento", "tolerancia_tardanza_min": 10},
+        headers=ADMIN_HEADERS,
+    )
+    assert res_ok.status_code == 200
+    assert res_ok.json()["tolerancia_tardanza_min"] == 10
+
+
+def test_auditoria_meet_entrada_salida_reemplaza_edge_functions():
+    """Valida los nuevos endpoints REST de entrada/salida/historial Meet sin InsForge Functions."""
+    res_est = client.post("/asistencia/meet/entrada", json={"cursoId": "CRS-001"}, headers=ESTUDIANTE_HEADERS)
+    assert res_est.status_code == 403
+
+    res_in = client.post("/asistencia/meet/entrada", json={"cursoId": "CRS-001"}, headers=DOCENTE_HEADERS)
+    assert res_in.status_code == 201
+    assert res_in.json()["estado"] == "EN_PROGRESO"
+
+    res_out = client.post("/asistencia/meet/salida", json={"cursoId": "CRS-001"}, headers=DOCENTE_HEADERS)
+    assert res_out.status_code == 200
+    assert res_out.json()["estado"] == "FINALIZADA"
+
+    res_hist = client.get("/asistencia/meet/historial/CRS-001", headers=DOCENTE_HEADERS)
+    assert res_hist.status_code == 200
+    assert len(res_hist.json()) >= 1
+
+
+def test_storage_upload_valida_bucket_y_formato():
+    """Valida que el guardián de Supabase Storage rechace buckets desconocidos y extensiones ejecutables."""
+    res_bad_bucket = client.post(
+        "/storage/upload/bucket-falso",
+        files={"file": ("tarea.pdf", b"%PDF-1.4 demo", "application/pdf")},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert res_bad_bucket.status_code == 400
+
+    res_bad_ext = client.post(
+        "/storage/upload/tareas-entregas",
+        files={"file": ("malware.exe", b"MZ0000", "application/octet-stream")},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert res_bad_ext.status_code == 400
+
+
+def test_auth_account_solo_admin(monkeypatch):
+    """Valida que la creación de cuentas en Supabase Auth requiera rol Admin."""
+    res_denied = client.post(
+        "/usuarios/auth-account",
+        json={"correo": "nuevo@academia.edu.pe", "password": "Password123", "rol": "estudiante"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert res_denied.status_code == 403
+
+    monkeypatch.setattr(
+        usuarios_router,
+        "create_supabase_auth_user",
+        lambda email, password, full_name="", role="estudiante": {
+            "authUserId": "00000000-0000-4000-8000-000000000099",
+            "emailVerified": True,
+            "requiresEmailVerification": False,
+        },
+    )
+    res_ok = client.post(
+        "/usuarios/auth-account",
+        json={"correo": "nuevo@academia.edu.pe", "password": "Password123", "nombre": "Alumno Nuevo", "rol": "estudiante"},
+        headers=ADMIN_HEADERS,
+    )
+    assert res_ok.status_code == 201
+    assert res_ok.json()["authUserId"] == "00000000-0000-4000-8000-000000000099"
+
 
 
 

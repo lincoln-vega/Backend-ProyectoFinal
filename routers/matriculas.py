@@ -375,3 +375,100 @@ def registrar_pago(pago: PagoCreate):
     save_db(db)
     print(f"[OK - REGISTRAR PAGO] Pago '{pago.id}' (Comprobante: {pago.comprobante}, Monto: S/ {pago.monto}) del estudiante '{pago.estudiante}' registrado correctamente.")
     return {"mensaje": "Pago registrado y saldo actualizado", "pago": pago}
+
+
+@router.put("/{matricula_id}", dependencies=[Depends(require_role(["admin"]))])
+def actualizar_matricula(matricula_id: str, matricula: MatriculaCreate):
+    conn = get_pg_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE matriculas
+                    SET estudiante = %s, dni = %s, correo = %s, celular = %s,
+                        programa = %s, ciclo = %s, turno = %s, "fechaMatricula" = %s,
+                        "modalidadPago" = %s, "montoTotal" = %s, "montoPagado" = %s,
+                        "saldoPendiente" = %s, estado = %s
+                    WHERE id = %s
+                    RETURNING *;
+                    """,
+                    (
+                        matricula.estudiante,
+                        matricula.dni,
+                        matricula.correo,
+                        matricula.celular,
+                        matricula.programa,
+                        matricula.ciclo,
+                        matricula.turno,
+                        matricula.fechaMatricula,
+                        matricula.modalidadPago,
+                        matricula.montoTotal,
+                        matricula.montoPagado,
+                        matricula.saldoPendiente,
+                        matricula.estado,
+                        matricula_id,
+                    ),
+                )
+                updated = fetch_one_as_dict(cur)
+                if not updated:
+                    raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+                if matricula.cursosInscritos is not None:
+                    sincronizar_cursos_estudiante(
+                        matricula.estudianteId,
+                        matricula.dni,
+                        matricula.correo,
+                        matricula.cursosInscritos,
+                        external_conn=conn,
+                    )
+                conn.commit()
+                return updated
+        except HTTPException:
+            conn.rollback()
+            raise
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"Error al actualizar matrícula: {e}")
+        finally:
+            conn.close()
+
+    db = load_db()
+    mats = db.get("matriculas", [])
+    for idx, m in enumerate(mats):
+        if m.get("id") == matricula_id:
+            mats[idx] = {**m, **matricula.model_dump()}
+            save_db(db)
+            return mats[idx]
+    raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+
+
+@router.delete("/{matricula_id}", dependencies=[Depends(require_role(["admin"]))])
+def eliminar_matricula(matricula_id: str):
+    conn = get_pg_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM pagos WHERE \"matriculaId\" = %s;", (matricula_id,))
+                cur.execute("DELETE FROM matriculas WHERE id = %s RETURNING id;", (matricula_id,))
+                deleted = fetch_one_as_dict(cur)
+                if not deleted:
+                    raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+                conn.commit()
+                return {"mensaje": "Matrícula eliminada correctamente", "id": matricula_id}
+        except HTTPException:
+            conn.rollback()
+            raise
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"Error al eliminar matrícula: {e}")
+        finally:
+            conn.close()
+
+    db = load_db()
+    mats = db.get("matriculas", [])
+    filtradas = [m for m in mats if m.get("id") != matricula_id]
+    if len(filtradas) == len(mats):
+        raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+    db["matriculas"] = filtradas
+    save_db(db)
+    return {"mensaje": "Matrícula eliminada correctamente", "id": matricula_id}
