@@ -340,6 +340,9 @@ CREATE TABLE IF NOT EXISTS tareas (
     docente_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
     docente TEXT NOT NULL,
     estado TEXT DEFAULT 'Por entregar',
+    archivo_url TEXT,
+    archivo_path TEXT,
+    archivo_nombre TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -467,8 +470,10 @@ CREATE INDEX IF NOT EXISTS idx_sesiones_clase_curso ON sesiones_clase (curso_id,
 CREATE INDEX IF NOT EXISTS idx_sesiones_clase_docente ON sesiones_clase (docente_id, estado);
 CREATE INDEX IF NOT EXISTS idx_asistencia_alumnos_est ON asistencia_alumnos (estudiante_id);
 CREATE INDEX IF NOT EXISTS idx_tareas_curso ON tareas (curso_id);
+CREATE INDEX IF NOT EXISTS idx_tareas_ciclo ON tareas (ciclo_id);
 CREATE INDEX IF NOT EXISTS idx_tarea_entregas_tarea ON tarea_entregas (tarea_id);
 CREATE INDEX IF NOT EXISTS idx_tarea_entregas_est ON tarea_entregas (estudiante_id);
+CREATE INDEX IF NOT EXISTS idx_tarea_entregas_curso ON tarea_entregas (curso_id);
 CREATE INDEX IF NOT EXISTS idx_anuncios_curso ON anuncios (curso_id);
 CREATE INDEX IF NOT EXISTS idx_mensajes_docente ON mensajes (docente_id);
 CREATE INDEX IF NOT EXISTS idx_mensajes_estudiante ON mensajes (LOWER(estudiante_correo));
