@@ -44,6 +44,9 @@ class AnuncioCreate(BaseModel):
     prioridad: str = "Normal"
     docente_id: Optional[str] = Field(None, alias="docenteId")
     docente: str
+    archivo_url: Optional[str] = Field(None, alias="archivoUrl")
+    archivo_path: Optional[str] = Field(None, alias="archivoPath")
+    archivo_nombre: Optional[str] = Field(None, alias="archivoNombre")
 
 # --- ENDPOINTS TAREAS ---
 
@@ -273,6 +276,8 @@ def listar_anuncios(curso_id: Optional[str] = None, ciclo_id: Optional[str] = No
                 query = """
                     SELECT id, curso_id AS "cursoId", ciclo_id AS "cicloId", curso, titulo,
                            contenido, prioridad, docente_id AS "docenteId", docente,
+                           archivo_url AS "archivoUrl", archivo_path AS "archivoPath",
+                           archivo_nombre AS "archivoNombre",
                            created_at AS "createdAt"
                     FROM anuncios
                     WHERE 1=1
@@ -334,8 +339,11 @@ def crear_anuncio(
                     if c_row:
                         resolved_ciclo = c_row.get("ciclo_id")
                 cur.execute("""
-                    INSERT INTO anuncios (id, curso_id, ciclo_id, curso, titulo, contenido, prioridad, docente_id, docente)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    INSERT INTO anuncios (
+                        id, curso_id, ciclo_id, curso, titulo, contenido, prioridad,
+                        docente_id, docente, archivo_url, archivo_path, archivo_nombre
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """, (
                     anuncio_id,
                     anuncio.curso_id,
@@ -345,7 +353,10 @@ def crear_anuncio(
                     anuncio.contenido,
                     anuncio.prioridad,
                     anuncio.docente_id,
-                    anuncio.docente
+                    anuncio.docente,
+                    anuncio.archivo_url,
+                    anuncio.archivo_path,
+                    anuncio.archivo_nombre,
                 ))
                 conn.commit()
         except Exception as e:
@@ -370,7 +381,10 @@ def crear_anuncio(
         "prioridad": anuncio.prioridad,
         "docenteId": anuncio.docente_id,
         "docente_id": anuncio.docente_id,
-        "docente": anuncio.docente
+        "docente": anuncio.docente,
+        "archivoUrl": anuncio.archivo_url,
+        "archivoPath": anuncio.archivo_path,
+        "archivoNombre": anuncio.archivo_nombre,
     }
     db["anuncios"].insert(0, nuevo_anuncio_dict)
     save_db(db)

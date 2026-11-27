@@ -28,6 +28,7 @@ SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 
 BUCKETS = [
     {"id": "tareas-entregas", "name": "tareas-entregas", "public": False, "file_size_limit": 15 * 1024 * 1024},
+    {"id": "materiales-clase", "name": "materiales-clase", "public": False, "file_size_limit": 15 * 1024 * 1024},
     {"id": "vouchers-pago", "name": "vouchers-pago", "public": False, "file_size_limit": 5 * 1024 * 1024},
     {"id": "justificantes-docentes", "name": "justificantes-docentes", "public": False, "file_size_limit": 5 * 1024 * 1024},
 ]

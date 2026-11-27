@@ -984,6 +984,205 @@ def test_filtros_por_ciclo_en_cursos_matriculas_tareas_y_anuncios():
     assert res_anns.json() == []
 
 
+# --- PRUEBAS FASE 3: MOTOR DE CLASES EN VIVO, PERMANENCIA 2DO PLANO Y ASISTENCIA HÍBRIDA ---
+
+def test_clases_vivo_rbac_bloquea_estudiante_al_iniciar():
+    """Un estudiante nunca puede abrir una sesión docente en vivo."""
+    res = client.post("/clases-vivo/iniciar", json={"cursoId": "CRS-001"}, headers=ESTUDIANTE_HEADERS)
+    assert res.status_code == 403
+
+
+def test_clases_vivo_ciclo_completo_pase_lista_y_tope_horas(monkeypatch):
+    """
+    Valida el flujo completo de Fase 3:
+    1. Inicio idempotente y bloqueo 409 si intenta abrir otra sección sin cerrar la actual.
+    2. Tardanza docente (>10 min) genera incidencia automática.
+    3. Ingreso alumno AUTO_MEET, latido anti-spam, alerta de abandono y subsanación PASE_LISTA.
+    4. Tope contractual al finalizar: 135 min reales en bloque de 120 min -> 120.0 min computables.
+    """
+    from datetime import datetime
+    import routers.clases_vivo as cv
+    from database import load_db, save_db
+
+    # Asegurar que existan dos cursos de prueba en db.json
+    db = load_db()
+    cursos = db.setdefault("courses", [])
+    if not any(c.get("id") == "CRS-TEST-F3A" for c in cursos):
+        cursos.append({
+            "id": "CRS-TEST-F3A",
+            "asignatura": "Álgebra Fase 3",
+            "docenteId": "USR-107",
+            "docente": "Docente Test",
+            "dias": ["Lunes"],
+            "horaInicio": "08:00",
+            "horaFin": "10:00",
+            "meetUrl": "https://meet.google.com/test-f3a",
+            "estado": "Activo",
+        })
+    if not any(c.get("id") == "CRS-TEST-F3B" for c in cursos):
+        cursos.append({
+            "id": "CRS-TEST-F3B",
+            "asignatura": "Física Fase 3",
+            "docenteId": "USR-107",
+            "docente": "Docente Test",
+            "dias": ["Lunes"],
+            "horaInicio": "10:00",
+            "horaFin": "12:00",
+            "meetUrl": "https://meet.google.com/test-f3b",
+            "estado": "Activo",
+        })
+    # Limpiar sesiones previas de este docente de prueba
+    db["sesionesClase"] = [
+        s for s in db.get("sesionesClase", []) if s.get("docente_id") != "USR-107"
+    ]
+    save_db(db)
+
+    # 1. Docente inicia a las 08:18 AM (18 min tarde > 10 min tolerancia)
+    t_inicio = datetime(2026, 11, 27, 8, 18, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_inicio)
+
+    r_start = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3A"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_start.status_code == 201
+    ses = r_start.json()
+    sesion_id = ses["id"]
+    assert ses["estado"] == "EN_CLASE"
+    assert ses["minutosTardanzaDocente"] == 18
+    assert ses["minutosBloqueProgramado"] == 120
+
+    # Llamada repetida sobre el mismo curso es idempotente (resiste F5)
+    r_idem = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3A"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_idem.status_code == 201
+    assert r_idem.json()["id"] == sesion_id
+
+    # Abrir OTRA sección distinta mientras CRS-TEST-F3A sigue activa devuelve 409
+    r_conflict = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3B"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_conflict.status_code == 409
+
+    # 2. Estudiante se une a los 3 minutos de iniciada la clase (Puntual <= 10 min)
+    t_join = datetime(2026, 11, 27, 8, 21, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_join)
+    r_join = client.post(f"/clases-vivo/{sesion_id}/unirse", headers=ESTUDIANTE_HEADERS)
+    assert r_join.status_code == 200
+    assert r_join.json()["estado"] == "Presente"
+    assert r_join.json()["ventanaAbierta"] is True
+
+    # Latido inmediato (<45s) no infla minutos (protección anti-spam)
+    r_spam = client.post(
+        f"/clases-vivo/{sesion_id}/latido",
+        json={"ventanaAbierta": True},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert r_spam.status_code == 200
+    assert r_spam.json()["minutosPermanencia"] == 1
+
+    # Latido legítimo 60s después incrementa permanencia
+    t_beat = datetime(2026, 11, 27, 8, 22, 5, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_beat)
+    r_beat = client.post(
+        f"/clases-vivo/{sesion_id}/latido",
+        json={"ventanaAbierta": True},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert r_beat.status_code == 200
+    assert r_beat.json()["minutosPermanencia"] == 2
+
+    # Estudiante cierra la pestaña de Meet al minuto 2 (< 15 min) -> dispara alertaAbandono
+    t_close_win = datetime(2026, 11, 27, 8, 22, 30, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_close_win)
+    client.post(
+        f"/clases-vivo/{sesion_id}/latido",
+        json={"ventanaAbierta": False},
+        headers=ESTUDIANTE_HEADERS,
+    )
+
+    r_lista = client.get(f"/clases-vivo/{sesion_id}/lista", headers=DOCENTE_HEADERS)
+    assert r_lista.status_code == 200
+    est_item = next(
+        e for e in r_lista.json()["estudiantes"] if e["estudianteId"] == "USR-108"
+    )
+    assert est_item["alertaAbandono"] is True
+
+    # Docente subsana manualmente porque el alumno avisó que pasó al celular (PASE_LISTA)
+    r_override = client.put(
+        f"/clases-vivo/{sesion_id}/lista/USR-108",
+        json={"estado": "Presente", "observacion": "Conectado desde móvil"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_override.status_code == 200
+    assert r_override.json()["origen"] == "PASE_LISTA"
+
+    # 3. Docente cierra a las 10:33 AM (135 min reales brutos > 120 min bloque -> tope en 120.0)
+    t_fin = datetime(2026, 11, 27, 10, 33, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_fin)
+    r_fin = client.post(f"/clases-vivo/{sesion_id}/finalizar", headers=DOCENTE_HEADERS)
+    assert r_fin.status_code == 200
+    fin_data = r_fin.json()
+    assert fin_data["estado"] == "FINALIZADA"
+    assert fin_data["minutosRealesBrutos"] == 135.0
+    assert fin_data["minutosEfectivosDictados"] == 120.0
+
+    # Resumen de asistencia real por curso refleja la sesión finalizada
+    r_resumen = client.get("/clases-vivo/resumen-asistencia", headers=ESTUDIANTE_HEADERS)
+    assert r_resumen.status_code == 200
+    assert r_resumen.json()["cursos"]["CRS-TEST-F3A"]["porcentaje"] == 100
+
+
+def test_clases_vivo_autocierre_por_olvido_y_material_en_anuncios(monkeypatch):
+    """
+    Valida que si el docente olvida cerrar la clase pasados +20 min del fin del bloque,
+    el sistema la auto-cierre al tope del bloque; y que anuncios soporte archivo adjunto.
+    """
+    from datetime import datetime
+    import routers.clases_vivo as cv
+
+    t_ini = datetime(2026, 11, 27, 10, 2, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_ini)
+    r_start = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3B"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_start.status_code == 201
+
+    # Publicar separata en clase vía /anuncios/
+    r_ann = client.post(
+        "/anuncios/",
+        json={
+            "cursoId": "CRS-TEST-F3B",
+            "curso": "Física Fase 3",
+            "titulo": "Separata Dinámica Lineal",
+            "contenido": "Resolver problemas 1 al 10.",
+            "prioridad": "Alta",
+            "docente": "Docente Test",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/materiales-clase/sep.pdf",
+            "archivoNombre": "Separata_Dinamica.pdf",
+        },
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_ann.status_code == 201
+    assert r_ann.json()["archivoNombre"] == "Separata_Dinamica.pdf"
+
+    # Avanzar reloj a las 12:25 PM (> 12:00 PM + 20 min gracia) -> debe auto-cerrarse
+    t_after = datetime(2026, 11, 27, 12, 25, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_after)
+    r_activa = client.get("/clases-vivo/activa?curso_id=CRS-TEST-F3B", headers=DOCENTE_HEADERS)
+    assert r_activa.status_code == 200
+    assert r_activa.json()["activa"] is None
+
+
+
 
 
 

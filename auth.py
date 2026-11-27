@@ -11,9 +11,40 @@ from database import DATABASE_URL, fetch_one_as_dict, get_pg_connection
 
 security = HTTPBearer(auto_error=False)
 
-# Cache en memoria con TTL de 60 segundos para evitar llamadas HTTP redundantes a Supabase Auth en cada request
+# Cache en memoria de identidad + perfil SQL (TTL 120s) y cliente HTTP keep-alive hacia Supabase Auth
 _SESSION_CACHE: Dict[str, Dict[str, Any]] = {}
-_SESSION_CACHE_TTL = 60  # segundos
+_PROFILE_CACHE: Dict[str, Dict[str, Any]] = {}
+_SESSION_CACHE_TTL = 120  # segundos
+
+_HTTP_CLIENT = httpx.Client(
+    timeout=10.0,
+    limits=httpx.Limits(max_keepalive_connections=10, max_connections=25),
+)
+
+
+def prime_session_cache(
+    token: str,
+    auth_user_id: str,
+    email: str,
+    profile: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Pre-carga en memoria el token y el perfil completo justo al completar POST /usuarios/login."""
+    now = time.time()
+    clean_uid = str(auth_user_id).strip()
+    clean_email = str(email or "").strip().lower()
+    if token and clean_uid:
+        _SESSION_CACHE[token.strip()] = {
+            "identity": {"id": clean_uid, "email": clean_email},
+            "timestamp": now,
+        }
+    if clean_uid and isinstance(profile, dict):
+        _PROFILE_CACHE[clean_uid] = {"profile": dict(profile), "timestamp": now}
+
+
+def invalidate_auth_caches() -> None:
+    """Invalida la caché de perfiles cuando un administrador edita o desactiva un usuario."""
+    _PROFILE_CACHE.clear()
+    _SESSION_CACHE.clear()
 
 
 def _supabase_url() -> str:
@@ -47,7 +78,7 @@ def authenticate_with_supabase(email: str, password: str) -> Dict[str, Any]:
     anon_key = _supabase_anon_key()
 
     try:
-        response = httpx.post(
+        response = _HTTP_CLIENT.post(
             f"{base_url}/auth/v1/token?grant_type=password",
             headers={
                 "apikey": anon_key,
@@ -268,6 +299,12 @@ def delete_supabase_auth_user(auth_user_id: str) -> bool:
 
 
 def get_profile_by_auth_id(auth_user_id: str, email: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    clean_uid = str(auth_user_id).strip()
+    now = time.time()
+    cached_prof = _PROFILE_CACHE.get(clean_uid)
+    if cached_prof and (now - cached_prof["timestamp"] < _SESSION_CACHE_TTL):
+        return dict(cached_prof["profile"])
+
     conn = get_pg_connection()
     if not conn:
         detail = (
@@ -284,12 +321,12 @@ def get_profile_by_auth_id(auth_user_id: str, email: Optional[str] = None) -> Op
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, auth_user_id, nombres, apellidos, correo, rol, estado
+                SELECT *
                 FROM users
                 WHERE auth_user_id = %s::uuid
                 LIMIT 1;
                 """,
-                (auth_user_id,),
+                (clean_uid,),
             )
             profile = fetch_one_as_dict(cur)
             if profile is None and email:
@@ -299,13 +336,15 @@ def get_profile_by_auth_id(auth_user_id: str, email: Optional[str] = None) -> Op
                     UPDATE users
                     SET auth_user_id = %s::uuid
                     WHERE LOWER(correo) = LOWER(%s) AND auth_user_id IS NULL
-                    RETURNING id, auth_user_id, nombres, apellidos, correo, rol, estado;
+                    RETURNING *;
                     """,
-                    (auth_user_id, email.strip()),
+                    (clean_uid, email.strip()),
                 )
                 profile = fetch_one_as_dict(cur)
                 if profile:
                     conn.commit()
+            if profile:
+                _PROFILE_CACHE[clean_uid] = {"profile": dict(profile), "timestamp": now}
             return profile
     except Exception as exc:
         raise HTTPException(
@@ -352,11 +391,11 @@ def get_current_identity(
         except JWTError:
             pass
 
-    # 2. Verificación autoritativa contra Supabase Auth (/auth/v1/user)
+    # 2. Verificación autoritativa contra Supabase Auth (/auth/v1/user) con conexión keep-alive
     base_url = _supabase_url()
     anon_key = _supabase_anon_key()
     try:
-        response = httpx.get(
+        response = _HTTP_CLIENT.get(
             f"{base_url}/auth/v1/user",
             headers={
                 "apikey": anon_key,

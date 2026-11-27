@@ -1,10 +1,12 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import check_pg_health
+from database import check_pg_health, warmup_pg_pool
 from routers import (
     usuarios,
     horarios,
     asistencia,
+    clases_vivo,
     monitoreo,
     matriculas,
     incidencias,
@@ -15,10 +17,17 @@ from routers import (
     storage,
 )
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    warmup_pg_pool(6)
+    yield
+
+
 app = FastAPI(
     title="API Backend - Academia Preuniversitaria Virtual",
     version="2.1.0",
     description="Backend FastAPI unificado con Supabase (PostgreSQL, Auth y Storage) y control de roles RBAC",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -32,6 +41,7 @@ app.add_middleware(
 app.include_router(usuarios.router)
 app.include_router(horarios.router)
 app.include_router(asistencia.router)
+app.include_router(clases_vivo.router)
 app.include_router(monitoreo.router)
 app.include_router(matriculas.router)
 app.include_router(incidencias.router)

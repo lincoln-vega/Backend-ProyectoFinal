@@ -291,8 +291,11 @@ CREATE TABLE IF NOT EXISTS sesiones_clase (
     hora_real_inicio TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     hora_real_fin TIMESTAMPTZ,
     segundos_receso_acumulados INTEGER NOT NULL DEFAULT 0,
+    minutos_reales_brutos NUMERIC(8, 2) NOT NULL DEFAULT 0,
+    minutos_bloque_programado INTEGER NOT NULL DEFAULT 120,
     minutos_efectivos_dictados NUMERIC(8, 2) DEFAULT 0,
     minutos_tardanza_docente INTEGER NOT NULL DEFAULT 0,
+    cierre_automatico BOOLEAN NOT NULL DEFAULT FALSE,
     estado TEXT NOT NULL DEFAULT 'EN_CLASE' CHECK (estado IN ('EN_CLASE', 'EN_RECESO', 'FINALIZADA')),
     meet_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -316,6 +319,9 @@ CREATE TABLE IF NOT EXISTS asistencia_alumnos (
     estado TEXT NOT NULL DEFAULT 'Presente' CHECK (estado IN ('Presente', 'Tardanza', 'Ausente', 'Justificado')),
     origen TEXT NOT NULL DEFAULT 'AUTO_MEET' CHECK (origen IN ('AUTO_MEET', 'PASE_LISTA')),
     hora_registro TIMESTAMPTZ DEFAULT NOW(),
+    minutos_permanencia INTEGER NOT NULL DEFAULT 0,
+    ultimo_latido TIMESTAMPTZ,
+    ventana_abierta BOOLEAN NOT NULL DEFAULT FALSE,
     observacion TEXT,
     CONSTRAINT uq_sesion_estudiante UNIQUE (sesion_id, estudiante_id)
 );
@@ -368,6 +374,9 @@ CREATE TABLE IF NOT EXISTS anuncios (
     prioridad TEXT DEFAULT 'Normal',
     docente_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
     docente TEXT NOT NULL,
+    archivo_url TEXT,
+    archivo_path TEXT,
+    archivo_nombre TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -11,6 +11,8 @@ from auth import (
     create_supabase_auth_user,
     delete_supabase_auth_user,
     get_profile_by_auth_id,
+    invalidate_auth_caches,
+    prime_session_cache,
     require_role,
 )
 
@@ -396,6 +398,7 @@ def login(form_data: UserLogin):
             detail="La cuenta se encuentra inactiva",
         )
 
+    prime_session_cache(access_token, str(auth_user["id"]), correo_clean, user)
     full_name = f"{user['nombres']} {user['apellidos']}".strip()
     print(f"[OK - LOGIN] Usuario '{full_name}' ({correo_clean}, Rol: {user['rol']}) inició sesión correctamente.")
     return {
@@ -406,6 +409,7 @@ def login(form_data: UserLogin):
         "userId": user["id"],
         "id": user["id"],
         "email": user.get("correo"),
+        "profile": sanitizar_usuario_por_rol(user, str(user.get("rol", "estudiante"))),
     }
 
 
@@ -645,6 +649,7 @@ def crear_usuario(
 
 @router.put("/{identificador}", dependencies=[Depends(require_role(["admin"]))])
 def actualizar_usuario(identificador: str, user_data: UserUpdate):
+    invalidate_auth_caches()
     update_data = user_data.model_dump(exclude_unset=True)
     if "cicloVirtual" in update_data:
         update_data["ciclovirtual"] = update_data.pop("cicloVirtual")
@@ -734,6 +739,7 @@ def actualizar_usuario(identificador: str, user_data: UserUpdate):
 
 @router.delete("/{identificador}", dependencies=[Depends(require_role(["admin"]))])
 def eliminar_usuario(identificador: str):
+    invalidate_auth_caches()
     conn = get_pg_connection()
     if conn:
         try:

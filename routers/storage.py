@@ -12,11 +12,15 @@ router = APIRouter(prefix="/storage", tags=["Supabase Storage"])
 # Límites estrictos alineados al plan gratuito de Supabase (1 GB total / 50 MB máx. por archivo)
 BUCKET_MAX_BYTES: Dict[str, int] = {
     "tareas-entregas": 15 * 1024 * 1024,        # 15 MB máx por entrega académica
+    "materiales-clase": 15 * 1024 * 1024,       # 15 MB máx por separata/pizarra/guía docente
     "vouchers-pago": 5 * 1024 * 1024,           # 5 MB máx por comprobante Yape/Plin/Banco
     "justificantes-docentes": 5 * 1024 * 1024,  # 5 MB máx por sustento médico/laboral
 }
 
-ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".zip", ".png", ".jpg", ".jpeg", ".webp"}
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx",
+    ".zip", ".png", ".jpg", ".jpeg", ".webp",
+}
 
 
 def _sanitize_filename(filename: str) -> str:
