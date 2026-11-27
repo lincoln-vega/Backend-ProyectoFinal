@@ -963,6 +963,28 @@ def test_auth_account_solo_admin(monkeypatch):
     assert res_ok.json()["authUserId"] == "00000000-0000-4000-8000-000000000099"
 
 
+# --- PRUEBAS FASE 2: FILTROS REALES POR CICLO / PERIODO Y MATRÍCULAS MULTI-CICLO ---
+
+def test_filtros_por_ciclo_en_cursos_matriculas_tareas_y_anuncios():
+    """Valida que los endpoints acepten ?ciclo_id= y ?correo= sin romper compatibilidad."""
+    res_cursos = client.get("/horarios/cursos?ciclo_id=CIC-INEXISTENTE", headers=ESTUDIANTE_HEADERS)
+    assert res_cursos.status_code == 200
+    assert res_cursos.json() == []
+
+    res_mats = client.get("/matriculas/?correo=noexiste@academia.edu.pe", headers=ESTUDIANTE_HEADERS)
+    assert res_mats.status_code == 200
+    assert res_mats.json() == []
+
+    res_tareas = client.get("/tareas/?ciclo_id=CIC-INEXISTENTE", headers=ESTUDIANTE_HEADERS)
+    assert res_tareas.status_code == 200
+    assert res_tareas.json() == []
+
+    res_anns = client.get("/anuncios/?ciclo_id=CIC-INEXISTENTE", headers=ESTUDIANTE_HEADERS)
+    assert res_anns.status_code == 200
+    assert res_anns.json() == []
+
+
+
 
 
 

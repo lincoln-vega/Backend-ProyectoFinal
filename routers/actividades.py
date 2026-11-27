@@ -14,6 +14,7 @@ class TareaCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: Optional[str] = None
     curso_id: str = Field(..., alias="cursoId")
+    ciclo_id: Optional[str] = Field(None, alias="cicloId")
     curso: str
     tipo: str = "Tarea Calificada"
     titulo: str
@@ -36,6 +37,7 @@ class AnuncioCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: Optional[str] = None
     curso_id: str = Field(..., alias="cursoId")
+    ciclo_id: Optional[str] = Field(None, alias="cicloId")
     curso: str
     titulo: str
     contenido: str
@@ -46,34 +48,33 @@ class AnuncioCreate(BaseModel):
 # --- ENDPOINTS TAREAS ---
 
 @router_tareas.get("/")
-def listar_tareas(curso_id: Optional[str] = None):
+def listar_tareas(curso_id: Optional[str] = None, ciclo_id: Optional[str] = None):
     """
     Retorna la lista de tareas académicas.
-    Permite filtrar por curso_id opcionalmente.
+    Permite filtrar por curso_id y/o ciclo_id opcionalmente.
     """
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
+                query = """
+                    SELECT id, curso_id AS "cursoId", ciclo_id AS "cicloId", curso, tipo, titulo,
+                           descripcion, fecha_limite AS "fechaLimite", puntos,
+                           docente_id AS "docenteId", docente, estado, created_at AS "createdAt"
+                    FROM tareas
+                    WHERE 1=1
+                """
+                params = []
                 if curso_id:
-                    cur.execute("""
-                        SELECT id, curso_id AS "cursoId", curso, tipo, titulo, descripcion,
-                               fecha_limite AS "fechaLimite", puntos, docente_id AS "docenteId",
-                               docente, estado, created_at AS "createdAt"
-                        FROM tareas
-                        WHERE curso_id = %s
-                        ORDER BY created_at DESC;
-                    """, (curso_id,))
-                else:
-                    cur.execute("""
-                        SELECT id, curso_id AS "cursoId", curso, tipo, titulo, descripcion,
-                               fecha_limite AS "fechaLimite", puntos, docente_id AS "docenteId",
-                               docente, estado, created_at AS "createdAt"
-                        FROM tareas
-                        ORDER BY created_at DESC;
-                    """)
+                    query += " AND curso_id = %s"
+                    params.append(curso_id)
+                if ciclo_id:
+                    query += " AND ciclo_id = %s"
+                    params.append(ciclo_id)
+                query += " ORDER BY created_at DESC;"
+                cur.execute(query, tuple(params))
                 rows = fetch_all_as_dict(cur)
-                if rows:
+                if rows is not None and (len(rows) > 0 or curso_id or ciclo_id):
                     return rows
         except Exception as e:
             print(f"[Listar Tareas PG] Error: {e}")
@@ -84,7 +85,9 @@ def listar_tareas(curso_id: Optional[str] = None):
     db = load_db()
     tareas = db.get("tareas", [])
     if curso_id:
-        return [t for t in tareas if t.get("curso_id") == curso_id or t.get("cursoId") == curso_id]
+        tareas = [t for t in tareas if t.get("curso_id") == curso_id or t.get("cursoId") == curso_id]
+    if ciclo_id:
+        tareas = [t for t in tareas if t.get("ciclo_id") == ciclo_id or t.get("cicloId") == ciclo_id]
     return tareas
 
 @router_tareas.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(["admin", "docente"]))])
@@ -106,17 +109,24 @@ def crear_tarea(
 
     tarea_id = tarea.id or f"TSK-{int(time.time() * 1000) % 1000000}"
     
-    # 1. Guardar en PostgreSQL
+    # 1. Guardar en PostgreSQL (heredando ciclo_id del curso si no se envió)
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
+                resolved_ciclo = tarea.ciclo_id
+                if not resolved_ciclo and tarea.curso_id:
+                    cur.execute("SELECT ciclo_id FROM courses WHERE id = %s LIMIT 1;", (tarea.curso_id,))
+                    c_row = fetch_one_as_dict(cur)
+                    if c_row:
+                        resolved_ciclo = c_row.get("ciclo_id")
                 cur.execute("""
-                    INSERT INTO tareas (id, curso_id, curso, tipo, titulo, descripcion, fecha_limite, puntos, docente_id, docente, estado)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    INSERT INTO tareas (id, curso_id, ciclo_id, curso, tipo, titulo, descripcion, fecha_limite, puntos, docente_id, docente, estado)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """, (
                     tarea_id,
                     tarea.curso_id,
+                    resolved_ciclo,
                     tarea.curso,
                     tarea.tipo,
                     tarea.titulo,
@@ -251,32 +261,33 @@ def eliminar_tarea(tarea_id: str):
 # --- ENDPOINTS ANUNCIOS ---
 
 @router_anuncios.get("/")
-def listar_anuncios(curso_id: Optional[str] = None):
+def listar_anuncios(curso_id: Optional[str] = None, ciclo_id: Optional[str] = None):
     """
     Retorna la lista de comunicados o anuncios académicos.
-    Permite filtrar por curso_id opcionalmente.
+    Permite filtrar por curso_id y/o ciclo_id opcionalmente.
     """
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
+                query = """
+                    SELECT id, curso_id AS "cursoId", ciclo_id AS "cicloId", curso, titulo,
+                           contenido, prioridad, docente_id AS "docenteId", docente,
+                           created_at AS "createdAt"
+                    FROM anuncios
+                    WHERE 1=1
+                """
+                params = []
                 if curso_id:
-                    cur.execute("""
-                        SELECT id, curso_id AS "cursoId", curso, titulo, contenido, prioridad,
-                               docente_id AS "docenteId", docente, created_at AS "createdAt"
-                        FROM anuncios
-                        WHERE curso_id = %s
-                        ORDER BY created_at DESC;
-                    """, (curso_id,))
-                else:
-                    cur.execute("""
-                        SELECT id, curso_id AS "cursoId", curso, titulo, contenido, prioridad,
-                               docente_id AS "docenteId", docente, created_at AS "createdAt"
-                        FROM anuncios
-                        ORDER BY created_at DESC;
-                    """)
+                    query += " AND curso_id = %s"
+                    params.append(curso_id)
+                if ciclo_id:
+                    query += " AND ciclo_id = %s"
+                    params.append(ciclo_id)
+                query += " ORDER BY created_at DESC;"
+                cur.execute(query, tuple(params))
                 rows = fetch_all_as_dict(cur)
-                if rows:
+                if rows is not None and (len(rows) > 0 or curso_id or ciclo_id):
                     return rows
         except Exception as e:
             print(f"[Listar Anuncios PG] Error: {e}")
@@ -287,7 +298,9 @@ def listar_anuncios(curso_id: Optional[str] = None):
     db = load_db()
     anuncios = db.get("anuncios", [])
     if curso_id:
-        return [a for a in anuncios if a.get("curso_id") == curso_id or a.get("cursoId") == curso_id]
+        anuncios = [a for a in anuncios if a.get("curso_id") == curso_id or a.get("cursoId") == curso_id]
+    if ciclo_id:
+        anuncios = [a for a in anuncios if a.get("ciclo_id") == ciclo_id or a.get("cicloId") == ciclo_id]
     return anuncios
 
 @router_anuncios.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(["admin", "docente"]))])
@@ -309,17 +322,24 @@ def crear_anuncio(
 
     anuncio_id = anuncio.id or f"ANN-{int(time.time() * 1000) % 1000000}"
 
-    # 1. Guardar en PostgreSQL
+    # 1. Guardar en PostgreSQL (heredando ciclo_id del curso si no se envió)
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
+                resolved_ciclo = anuncio.ciclo_id
+                if not resolved_ciclo and anuncio.curso_id:
+                    cur.execute("SELECT ciclo_id FROM courses WHERE id = %s LIMIT 1;", (anuncio.curso_id,))
+                    c_row = fetch_one_as_dict(cur)
+                    if c_row:
+                        resolved_ciclo = c_row.get("ciclo_id")
                 cur.execute("""
-                    INSERT INTO anuncios (id, curso_id, curso, titulo, contenido, prioridad, docente_id, docente)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+                    INSERT INTO anuncios (id, curso_id, ciclo_id, curso, titulo, contenido, prioridad, docente_id, docente)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """, (
                     anuncio_id,
                     anuncio.curso_id,
+                    resolved_ciclo,
                     anuncio.curso,
                     anuncio.titulo,
                     anuncio.contenido,

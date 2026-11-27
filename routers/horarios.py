@@ -25,6 +25,10 @@ class CourseCreate(BaseModel):
     meetUrl: Optional[str] = ""
     repositorio: Optional[str] = ""
     estado: str = "Activo"
+    cicloId: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("cicloId", "ciclo_id"),
+    )
     ciclovirtual: Optional[str] = Field(
         default="Semestral",
         validation_alias=AliasChoices("ciclovirtual", "cicloVirtual"),
@@ -100,24 +104,31 @@ def sincronizar_cursos_asignados_docente(course_id: str, new_docente_id: Optiona
         print(f"[Horarios] Advertencia al sincronizar cursosAsignados en db.json: {e}")
 
 
-# Listar todos los cursos (Cronograma global)
+# Listar todos los cursos (Cronograma global o filtrado por ciclo_id)
 @router.get("/cursos", dependencies=[Depends(require_role(["admin", "docente", "estudiante"]))])
-def listar_cursos():
+def listar_cursos(ciclo_id: Optional[str] = None):
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, asignatura, area, carrera, "docenteId", docente,
-                           dias, "horaInicio", "horaFin", "meetUrl", repositorio,
-                           estado, ciclovirtual, created_at
-                    FROM courses
-                    ORDER BY created_at DESC;
-                    """
-                )
+                query = """
+                    SELECT c.id, c.asignatura, c.area, c.carrera, c.ciclo_id AS "cicloId",
+                           c."docenteId", c.docente, c.dias, c."horaInicio", c."horaFin",
+                           c."meetUrl", c.repositorio, c.estado, c.ciclovirtual,
+                           COALESCE(ca.estado, CASE WHEN c.estado = 'Finalizado' THEN 'Finalizado' ELSE 'En Curso' END) AS "cicloEstado",
+                           ca.nombre AS "cicloNombre",
+                           c.created_at
+                    FROM courses c
+                    LEFT JOIN ciclos_academicos ca ON ca.id = c.ciclo_id
+                """
+                params = []
+                if ciclo_id:
+                    query += " WHERE c.ciclo_id = %s"
+                    params.append(ciclo_id)
+                query += " ORDER BY c.created_at DESC;"
+                cur.execute(query, tuple(params))
                 rows = fetch_all_as_dict(cur)
-                if rows:
+                if rows is not None and (len(rows) > 0 or ciclo_id):
                     return rows
         except Exception as e:
             print(f"[Horarios] Fallback listar_cursos a db.json: {e}")
@@ -125,7 +136,10 @@ def listar_cursos():
             conn.close()
 
     db = load_db()
-    return db.get("courses", [])
+    courses = db.get("courses", [])
+    if ciclo_id:
+        courses = [c for c in courses if (c.get("cicloId") or c.get("ciclo_id")) == ciclo_id]
+    return courses
 
 
 # Obtener un curso por su ID
@@ -137,11 +151,14 @@ def obtener_curso(curso_id: str):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, asignatura, area, carrera, "docenteId", docente,
-                           dias, "horaInicio", "horaFin", "meetUrl", repositorio,
-                           estado, ciclovirtual, created_at
-                    FROM courses
-                    WHERE id = %s
+                    SELECT c.id, c.asignatura, c.area, c.carrera, c.ciclo_id AS "cicloId",
+                           c."docenteId", c.docente, c.dias, c."horaInicio", c."horaFin",
+                           c."meetUrl", c.repositorio, c.estado, c.ciclovirtual,
+                           COALESCE(ca.estado, 'En Curso') AS "cicloEstado",
+                           c.created_at
+                    FROM courses c
+                    LEFT JOIN ciclos_academicos ca ON ca.id = c.ciclo_id
+                    WHERE c.id = %s
                     LIMIT 1;
                     """,
                     (curso_id,),
@@ -180,14 +197,24 @@ def crear_curso(course: CourseCreate):
     if conn:
         try:
             with conn.cursor() as cur:
+                resolved_ciclo_id = course.cicloId
+                if not resolved_ciclo_id and course.ciclovirtual:
+                    cur.execute(
+                        "SELECT id FROM ciclos_academicos WHERE LOWER(nombre) = LOWER(%s) OR LOWER(codigo) = LOWER(%s) LIMIT 1;",
+                        (course.ciclovirtual.strip(), course.ciclovirtual.strip()),
+                    )
+                    c_row = fetch_one_as_dict(cur)
+                    if c_row:
+                        resolved_ciclo_id = c_row["id"]
+                course_dict["cicloId"] = resolved_ciclo_id
                 cur.execute(
                     """
                     INSERT INTO courses (
-                        id, asignatura, area, carrera, "docenteId", docente,
+                        id, asignatura, area, carrera, ciclo_id, "docenteId", docente,
                         dias, "horaInicio", "horaFin", "meetUrl", repositorio,
                         estado, ciclovirtual, created_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, NOW()
+                        %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, NOW()
                     )
                     RETURNING *;
                     """,
@@ -196,6 +223,7 @@ def crear_curso(course: CourseCreate):
                         course.asignatura,
                         course.area,
                         course.carrera,
+                        resolved_ciclo_id,
                         course.docenteId,
                         course.docente,
                         json.dumps(course.dias),
@@ -257,12 +285,23 @@ def editar_curso(curso_id: str, course: CourseCreate):
     if conn:
         try:
             with conn.cursor() as cur:
+                resolved_ciclo_id = course.cicloId or curso_previo.get("cicloId")
+                if not resolved_ciclo_id and course.ciclovirtual:
+                    cur.execute(
+                        "SELECT id FROM ciclos_academicos WHERE LOWER(nombre) = LOWER(%s) OR LOWER(codigo) = LOWER(%s) LIMIT 1;",
+                        (course.ciclovirtual.strip(), course.ciclovirtual.strip()),
+                    )
+                    c_row = fetch_one_as_dict(cur)
+                    if c_row:
+                        resolved_ciclo_id = c_row["id"]
+                course_dict["cicloId"] = resolved_ciclo_id
                 cur.execute(
                     """
                     UPDATE courses
                     SET asignatura = %s,
                         area = %s,
                         carrera = %s,
+                        ciclo_id = %s,
                         "docenteId" = %s,
                         docente = %s,
                         dias = %s::jsonb,
@@ -278,6 +317,7 @@ def editar_curso(curso_id: str, course: CourseCreate):
                         course.asignatura,
                         course.area,
                         course.carrera,
+                        resolved_ciclo_id,
                         course.docenteId,
                         course.docente,
                         json.dumps(course.dias),
