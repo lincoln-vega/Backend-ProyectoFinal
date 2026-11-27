@@ -1385,7 +1385,9 @@ def test_reportes_pdf_binario_real_y_json_para_admin():
     """Verifica que los 5 reportes parametrizados generen PDFs válidos (%PDF-) y payloads JSON coherentes."""
     r_exec = client.get("/reportes/resumen-ejecutivo", headers=ADMIN_HEADERS)
     assert r_exec.status_code == 200
-    assert "kpis" in r_exec.json()
+    exec_body = r_exec.json()
+    assert "kpis" in exec_body and "indicadoresPorcentuales" in exec_body
+    assert "distribucionCiclos" in exec_body and "distribucionAreas" in exec_body
 
     r_users = client.get("/usuarios/", headers=ADMIN_HEADERS)
     est_user = next(
