@@ -1,186 +1,9 @@
 -- ==============================================================================
--- SCHEMA DE BASE DE DATOS NORMALIZADO (POSTGRESQL - INSFORGE BAAS)
--- Proyecto Final: Academia SCRM - Portal Académico y Gestión
+-- SCHEMA V2.0 — SUPABASE POSTGRESQL (ACADEMIA PREUNIVERSITARIA VIRTUAL)
+-- Proyecto Supabase: hgasvotbwatoznnizmzr
 -- ==============================================================================
 
--- 1. TABLA: users (Usuarios del sistema, roles RBAC y salarios)
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-    apellidos TEXT NOT NULL,
-    nombres TEXT NOT NULL,
-    "tipoDocumento" TEXT DEFAULT 'DNI', -- 'DNI', 'CE', 'Pasaporte'
-    dni TEXT,
-    "fechaNacimiento" TEXT,
-    correo TEXT UNIQUE NOT NULL,
-    celular TEXT,
-    "carreraObjetivo" TEXT,
-    "areaAcademica" TEXT,
-    rol TEXT NOT NULL DEFAULT 'estudiante', -- 'admin', 'docente', 'estudiante'
-    estado TEXT NOT NULL DEFAULT 'Activo', -- 'Activo', 'Inactivo'
-    "cursosAsignados" JSONB DEFAULT '[]'::jsonb,
-    "cursosInscritos" JSONB DEFAULT '[]'::jsonb,
-    ciclovirtual TEXT DEFAULT 'Semestral',
-    salario NUMERIC DEFAULT 0,
-    especialidad TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT check_users_dni CHECK (
-        dni IS NULL OR (
-            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
-            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
-            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
-        )
-    ),
-    CONSTRAINT check_users_celular CHECK (
-        celular IS NULL OR 
-        celular ~ '^9[0-9]{8}$' OR 
-        celular ~ '^\+[0-9]{8,15}$'
-    )
-);
-
--- 2. TABLA: courses (Cursos y programación horaria institucional sin cruces)
-CREATE TABLE IF NOT EXISTS courses (
-    id TEXT PRIMARY KEY,
-    asignatura TEXT NOT NULL,
-    area TEXT,
-    carrera TEXT,
-    "docenteId" TEXT REFERENCES users(id),
-    docente TEXT,
-    dias JSONB DEFAULT '[]'::jsonb, -- e.g. ["Lunes", "Miércoles"]
-    "horaInicio" TEXT NOT NULL, -- e.g. "08:00"
-    "horaFin" TEXT NOT NULL, -- e.g. "10:00"
-    "meetUrl" TEXT,
-    repositorio TEXT,
-    estado TEXT DEFAULT 'Activo',
-    ciclovirtual TEXT DEFAULT 'Semestral',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 3. TABLA: attendance_sessions (Sesiones de asistencia con cálculo de puntualidad)
-CREATE TABLE IF NOT EXISTS attendance_sessions (
-    id TEXT PRIMARY KEY,
-    "cursoId" TEXT REFERENCES courses(id),
-    asignatura TEXT NOT NULL,
-    "docenteId" TEXT REFERENCES users(id),
-    docente TEXT,
-    fecha TEXT NOT NULL, -- e.g. "2026-10-21"
-    "horaApertura" TEXT NOT NULL, -- e.g. "08:00"
-    modalidad TEXT DEFAULT 'Virtual en vivo',
-    "asistentesPuntuales" JSONB DEFAULT '[]'::jsonb,
-    tardanzas JSONB DEFAULT '[]'::jsonb,
-    ausentes JSONB DEFAULT '[]'::jsonb,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 4. TABLA: incidents (Incidencias laborales, justificaciones y reemplazos)
-CREATE TABLE IF NOT EXISTS incidents (
-    id TEXT PRIMARY KEY,
-    docente TEXT NOT NULL,
-    dni TEXT,
-    correo TEXT,
-    tipo TEXT NOT NULL, -- 'Inasistencia', 'Tardanza', 'Cambio Horario'
-    "fechaPresentacion" TEXT,
-    materia TEXT,
-    horario TEXT,
-    motivo TEXT,
-    "archivoNombre" TEXT,
-    estado TEXT DEFAULT 'Pendiente', -- 'Pendiente', 'Aprobado', 'Rechazado'
-    docenteid TEXT REFERENCES users(id),
-    cursoid TEXT REFERENCES courses(id),
-    docentepropuesto TEXT,
-    docentereemplazo TEXT,
-    horarioactualizado TEXT,
-    observaciones TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT check_incidents_dni CHECK (
-        dni IS NULL OR (
-            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
-            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
-            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
-        )
-    )
-);
-
--- 5. TABLA: matriculas (Registro oficial de matrículas y saldos de estudiantes)
-CREATE TABLE IF NOT EXISTS matriculas (
-    id TEXT PRIMARY KEY, -- e.g. "MAT-2026-001"
-    "tipoDocumento" TEXT DEFAULT 'DNI',
-    estudiante TEXT NOT NULL,
-    dni TEXT,
-    correo TEXT,
-    celular TEXT,
-    programa TEXT,
-    ciclo TEXT,
-    turno TEXT,
-    "fechaMatricula" TEXT,
-    "modalidadPago" TEXT, -- 'Al Contado', 'Cuotas'
-    "montoTotal" NUMERIC DEFAULT 0,
-    "montoPagado" NUMERIC DEFAULT 0,
-    "saldoPendiente" NUMERIC DEFAULT 0,
-    estado TEXT DEFAULT 'Al día', -- 'Al día', 'Pagado Total', 'Cuota Vencida', 'Pendiente'
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT check_matriculas_dni CHECK (
-        dni IS NULL OR (
-            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
-            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
-            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
-        )
-    ),
-    CONSTRAINT check_matriculas_celular CHECK (
-        celular IS NULL OR 
-        celular ~ '^9[0-9]{8}$' OR 
-        celular ~ '^\+[0-9]{8,15}$'
-    )
-);
-
--- 6. TABLA: pagos (Comprobantes y recibos de pago sincronizados)
-CREATE TABLE IF NOT EXISTS pagos (
-    id TEXT PRIMARY KEY, -- e.g. "PAG-001"
-    "matriculaId" TEXT REFERENCES matriculas(id),
-    estudiante TEXT,
-    concepto TEXT,
-    monto NUMERIC DEFAULT 0,
-    metodo TEXT, -- 'Yape / Plin', 'Transferencia BCP', 'Tarjeta Débito/Crédito', etc.
-    operacion TEXT,
-    comprobante TEXT, -- e.g. "B001-00382"
-    fecha TEXT,
-    estado TEXT DEFAULT 'Aprobado',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 7. TABLA: configuracion (Parámetros globales de la institución)
-CREATE TABLE IF NOT EXISTS configuracion (
-    id TEXT PRIMARY KEY DEFAULT 'general',
-    institucion_nombre TEXT NOT NULL,
-    institucion_ruc TEXT,
-    institucion_direccion TEXT,
-    institucion_telefono TEXT,
-    institucion_correo TEXT,
-    ciclo_vigente TEXT DEFAULT 'Semestral 2026-I',
-    ciclo_inicio TEXT,
-    ciclo_fin TEXT,
-    ciclo_estado TEXT DEFAULT 'En Curso',
-    tarifa_hora_docente NUMERIC DEFAULT 50.00,
-    tolerancia_tardanza_min INTEGER DEFAULT 15,
-    horas_descuento_inasistencia NUMERIC DEFAULT 2.00,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 8. TABLA: meet_attendance (Auditoría de conexión de clases virtuales Google Meet)
-CREATE TABLE IF NOT EXISTS meet_attendance (
-    id BIGSERIAL PRIMARY KEY,
-    docente_id TEXT REFERENCES users(id),
-    docente_email TEXT,
-    curso_id TEXT REFERENCES courses(id),
-    evento TEXT NOT NULL, -- 'ENTRADA', 'SALIDA'
-    hora_entrada TIMESTAMPTZ DEFAULT NOW(),
-    hora_salida TIMESTAMPTZ,
-    estado_sesion TEXT DEFAULT 'EN_PROGRESO',
-    minutos_efectivos NUMERIC,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 9. TABLA: areas_academicas (Facultades o áreas del conocimiento institucional)
+-- 1. ÁREAS ACADÉMICAS (Bloques de postulación: Ciencias/Ingenierías, Salud, Gestión, Letras)
 CREATE TABLE IF NOT EXISTS areas_academicas (
     id TEXT PRIMARY KEY,
     codigo TEXT UNIQUE NOT NULL,
@@ -192,7 +15,7 @@ CREATE TABLE IF NOT EXISTS areas_academicas (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 10. TABLA: carreras (Carreras profesionales / Programas académicos)
+-- 2. CARRERAS OBJETIVO (Programas universitarios a los que postulan los alumnos)
 CREATE TABLE IF NOT EXISTS carreras (
     id TEXT PRIMARY KEY,
     codigo TEXT UNIQUE NOT NULL,
@@ -207,7 +30,7 @@ CREATE TABLE IF NOT EXISTS carreras (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 11. TABLA: tipos_ciclo (Modalidades de ciclo: Semestral, Anual, Intensivo, etc.)
+-- 3. TIPOS DE CICLO (Anual, Semestral, Intensivo/Verano, Repaso)
 CREATE TABLE IF NOT EXISTS tipos_ciclo (
     id TEXT PRIMARY KEY,
     codigo TEXT UNIQUE NOT NULL,
@@ -220,7 +43,7 @@ CREATE TABLE IF NOT EXISTS tipos_ciclo (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 12. TABLA: ciclos_academicos (Periodos / convocatorias concretas de dictado)
+-- 4. CICLOS ACADÉMICOS (Convocatorias concretas activas en paralelo o finalizadas)
 CREATE TABLE IF NOT EXISTS ciclos_academicos (
     id TEXT PRIMARY KEY,
     codigo TEXT UNIQUE NOT NULL,
@@ -240,7 +63,7 @@ CREATE TABLE IF NOT EXISTS ciclos_academicos (
     CONSTRAINT check_ciclo_fechas CHECK (fecha_fin >= fecha_inicio)
 );
 
--- 13. TABLA: turnos (Turnos de estudio de la institución)
+-- 5. TURNOS DE ESTUDIO
 CREATE TABLE IF NOT EXISTS turnos (
     id TEXT PRIMARY KEY,
     codigo TEXT UNIQUE NOT NULL,
@@ -251,7 +74,7 @@ CREATE TABLE IF NOT EXISTS turnos (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 14. TABLA: ciclo_carreras (Oferta académica por ciclo: vacantes y disponibilidad)
+-- 6. OFERTA DE VACANTES POR CICLO Y CARRERA
 CREATE TABLE IF NOT EXISTS ciclo_carreras (
     id TEXT PRIMARY KEY,
     ciclo_id TEXT NOT NULL REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -264,186 +87,424 @@ CREATE TABLE IF NOT EXISTS ciclo_carreras (
     CONSTRAINT check_vacantes CHECK (vacantes_ocupadas <= vacantes_totales)
 );
 
+-- 7. USUARIOS DEL SISTEMA (Vinculados 1:1 con auth.users de Supabase)
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
+    apellidos TEXT NOT NULL,
+    nombres TEXT NOT NULL,
+    "tipoDocumento" TEXT DEFAULT 'DNI',
+    dni TEXT,
+    "fechaNacimiento" TEXT,
+    correo TEXT UNIQUE NOT NULL,
+    celular TEXT,
+    "carreraObjetivo" TEXT,
+    "areaAcademica" TEXT,
+    rol TEXT NOT NULL DEFAULT 'estudiante',
+    estado TEXT NOT NULL DEFAULT 'Activo',
+    "cursosAsignados" JSONB DEFAULT '[]'::jsonb,
+    "cursosInscritos" JSONB DEFAULT '[]'::jsonb,
+    ciclovirtual TEXT DEFAULT 'Semestral',
+    salario NUMERIC DEFAULT 0,
+    especialidad TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_users_dni CHECK (
+        dni IS NULL OR dni = '' OR (
+            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
+        )
+    ),
+    CONSTRAINT check_users_celular CHECK (
+        celular IS NULL OR celular = '' OR
+        celular ~ '^9[0-9]{8}$' OR
+        celular ~ '^\+[0-9]{8,15}$'
+    )
+);
+
+-- 8. CURSOS PREUNIVERSITARIOS Y HORARIOS
+CREATE TABLE IF NOT EXISTS courses (
+    id TEXT PRIMARY KEY,
+    asignatura TEXT NOT NULL,
+    area TEXT,
+    carrera TEXT,
+    ciclo_id TEXT REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    "docenteId" TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docente TEXT,
+    dias JSONB DEFAULT '[]'::jsonb,
+    "horaInicio" TEXT NOT NULL,
+    "horaFin" TEXT NOT NULL,
+    "meetUrl" TEXT,
+    repositorio TEXT,
+    estado TEXT DEFAULT 'Activo',
+    ciclovirtual TEXT DEFAULT 'Semestral',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. MATRÍCULAS POR CICLO ACADÉMICO
+CREATE TABLE IF NOT EXISTS matriculas (
+    id TEXT PRIMARY KEY,
+    estudiante_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    ciclo_id TEXT REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    "tipoDocumento" TEXT DEFAULT 'DNI',
+    estudiante TEXT NOT NULL,
+    dni TEXT,
+    correo TEXT,
+    celular TEXT,
+    programa TEXT,
+    ciclo TEXT,
+    turno TEXT,
+    "fechaMatricula" TEXT,
+    "modalidadPago" TEXT,
+    "montoTotal" NUMERIC DEFAULT 0,
+    "montoPagado" NUMERIC DEFAULT 0,
+    "saldoPendiente" NUMERIC DEFAULT 0,
+    "cursosInscritos" JSONB DEFAULT '[]'::jsonb,
+    estado TEXT DEFAULT 'Al día',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_matriculas_dni CHECK (
+        dni IS NULL OR dni = '' OR (
+            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
+        )
+    ),
+    CONSTRAINT check_matriculas_celular CHECK (
+        celular IS NULL OR celular = '' OR
+        celular ~ '^9[0-9]{8}$' OR
+        celular ~ '^\+[0-9]{8,15}$'
+    )
+);
+
+-- 10. PAGOS Y VOUCHERS (Con soporte de validación por Admin)
+CREATE TABLE IF NOT EXISTS pagos (
+    id TEXT PRIMARY KEY,
+    "matriculaId" TEXT REFERENCES matriculas(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    estudiante_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    estudiante TEXT,
+    concepto TEXT,
+    monto NUMERIC DEFAULT 0,
+    metodo TEXT,
+    operacion TEXT,
+    comprobante TEXT,
+    fecha TEXT,
+    voucher_url TEXT,
+    voucher_path TEXT,
+    motivo_rechazo TEXT,
+    validado_por TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    validado_en TIMESTAMPTZ,
+    estado TEXT DEFAULT 'Aprobado', -- 'Pendiente', 'Aprobado', 'Rechazado'
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 11. INCIDENCIAS DOCENTES, PERMUTAS Y JUSTIFICANTES
+CREATE TABLE IF NOT EXISTS incidents (
+    id TEXT PRIMARY KEY,
+    docente TEXT NOT NULL,
+    "tipoDocumento" TEXT DEFAULT 'DNI',
+    dni TEXT,
+    correo TEXT,
+    tipo TEXT NOT NULL,
+    "fechaPresentacion" TEXT,
+    materia TEXT,
+    horario TEXT,
+    motivo TEXT,
+    "archivoNombre" TEXT,
+    archivo_url TEXT,
+    archivo_path TEXT,
+    estado TEXT DEFAULT 'Pendiente',
+    docenteid TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    cursoid TEXT REFERENCES courses(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docentepropuesto TEXT,
+    docentereemplazo TEXT,
+    horarioactualizado TEXT,
+    observaciones TEXT,
+    minutos_tardanza INTEGER DEFAULT 0,
+    sesion_clase_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_incidents_dni CHECK (
+        dni IS NULL OR dni = '' OR (
+            (COALESCE("tipoDocumento", 'DNI') = 'DNI' AND dni ~ '^[0-9]{8}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'CE' AND dni ~ '^[A-Za-z0-9]{9,12}$') OR
+            (COALESCE("tipoDocumento", 'DNI') = 'Pasaporte' AND dni ~ '^[A-Za-z0-9]{6,12}$')
+        )
+    )
+);
+
+-- 12. CONFIGURACIÓN INSTITUCIONAL GLOBAL
+CREATE TABLE IF NOT EXISTS configuracion (
+    id TEXT PRIMARY KEY DEFAULT 'general',
+    institucion_nombre TEXT NOT NULL,
+    institucion_ruc TEXT,
+    institucion_direccion TEXT,
+    institucion_telefono TEXT,
+    institucion_correo TEXT,
+    ciclo_vigente TEXT DEFAULT 'Semestral San Marcos 2026-II',
+    ciclo_inicio TEXT,
+    ciclo_fin TEXT,
+    ciclo_estado TEXT DEFAULT 'En Curso',
+    tarifa_hora_docente NUMERIC DEFAULT 50.00,
+    tolerancia_tardanza_min INTEGER DEFAULT 10,
+    horas_descuento_inasistencia NUMERIC DEFAULT 2.00,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 13. SESIONES DE ASISTENCIA LEGACY & AUDITORÍA MEET
+CREATE TABLE IF NOT EXISTS attendance_sessions (
+    id TEXT PRIMARY KEY,
+    "cursoId" TEXT REFERENCES courses(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    asignatura TEXT NOT NULL,
+    "docenteId" TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docente TEXT,
+    fecha TEXT NOT NULL,
+    "horaApertura" TEXT NOT NULL,
+    modalidad TEXT DEFAULT 'Virtual en vivo',
+    "asistentesPuntuales" JSONB DEFAULT '[]'::jsonb,
+    tardanzas JSONB DEFAULT '[]'::jsonb,
+    ausentes JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS meet_attendance (
+    id BIGSERIAL PRIMARY KEY,
+    docente_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docente_email TEXT,
+    curso_id TEXT REFERENCES courses(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    evento TEXT NOT NULL,
+    hora_entrada TIMESTAMPTZ DEFAULT NOW(),
+    hora_salida TIMESTAMPTZ,
+    estado_sesion TEXT DEFAULT 'EN_PROGRESO',
+    minutos_efectivos NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. CLASES EN VIVO CON CRONÓMETRO, RECESOS Y ASISTENCIA HÍBRIDA (Fase 3)
+CREATE TABLE IF NOT EXISTS sesiones_clase (
+    id TEXT PRIMARY KEY,
+    curso_id TEXT NOT NULL REFERENCES courses(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    ciclo_id TEXT REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docente_id TEXT NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    docente_nombre TEXT,
+    fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+    hora_programada_inicio TEXT NOT NULL,
+    hora_programada_fin TEXT NOT NULL,
+    hora_real_inicio TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    hora_real_fin TIMESTAMPTZ,
+    segundos_receso_acumulados INTEGER NOT NULL DEFAULT 0,
+    minutos_reales_brutos NUMERIC(8, 2) NOT NULL DEFAULT 0,
+    minutos_bloque_programado INTEGER NOT NULL DEFAULT 120,
+    minutos_efectivos_dictados NUMERIC(8, 2) DEFAULT 0,
+    minutos_tardanza_docente INTEGER NOT NULL DEFAULT 0,
+    cierre_automatico BOOLEAN NOT NULL DEFAULT FALSE,
+    estado TEXT NOT NULL DEFAULT 'EN_CLASE' CHECK (estado IN ('EN_CLASE', 'EN_RECESO', 'FINALIZADA')),
+    meet_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS recesos_clase (
+    id BIGSERIAL PRIMARY KEY,
+    sesion_id TEXT NOT NULL REFERENCES sesiones_clase(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    inicio TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fin TIMESTAMPTZ,
+    segundos_duracion INTEGER DEFAULT 0,
+    motivo TEXT DEFAULT 'Receso académico'
+);
+
+CREATE TABLE IF NOT EXISTS asistencia_alumnos (
+    id BIGSERIAL PRIMARY KEY,
+    sesion_id TEXT NOT NULL REFERENCES sesiones_clase(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    curso_id TEXT NOT NULL REFERENCES courses(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    estudiante_id TEXT NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    estudiante_nombre TEXT,
+    estado TEXT NOT NULL DEFAULT 'Presente' CHECK (estado IN ('Presente', 'Tardanza', 'Ausente', 'Justificado')),
+    origen TEXT NOT NULL DEFAULT 'AUTO_MEET' CHECK (origen IN ('AUTO_MEET', 'PASE_LISTA')),
+    hora_registro TIMESTAMPTZ DEFAULT NOW(),
+    minutos_permanencia INTEGER NOT NULL DEFAULT 0,
+    ultimo_latido TIMESTAMPTZ,
+    ventana_abierta BOOLEAN NOT NULL DEFAULT FALSE,
+    observacion TEXT,
+    CONSTRAINT uq_sesion_estudiante UNIQUE (sesion_id, estudiante_id)
+);
+
+-- 15. TAREAS ACADÉMICAS Y ENTREGAS INDIVIDUALES POR ESTUDIANTE (Fase 4)
+CREATE TABLE IF NOT EXISTS tareas (
+    id TEXT PRIMARY KEY,
+    curso_id TEXT NOT NULL REFERENCES courses(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    ciclo_id TEXT REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    curso TEXT NOT NULL,
+    tipo TEXT DEFAULT 'Tarea Calificada',
+    titulo TEXT NOT NULL,
+    descripcion TEXT DEFAULT '',
+    fecha_limite TEXT NOT NULL,
+    puntos TEXT DEFAULT '20 pts',
+    docente_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docente TEXT NOT NULL,
+    estado TEXT DEFAULT 'Por entregar',
+    archivo_url TEXT,
+    archivo_path TEXT,
+    archivo_nombre TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tarea_entregas (
+    id TEXT PRIMARY KEY,
+    tarea_id TEXT NOT NULL REFERENCES tareas(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    curso_id TEXT NOT NULL REFERENCES courses(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    estudiante_id TEXT NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    estudiante_nombre TEXT NOT NULL,
+    estudiante_correo TEXT,
+    archivo_path TEXT,
+    archivo_url TEXT,
+    archivo_nombre TEXT,
+    tamano_bytes BIGINT DEFAULT 0,
+    comentario_alumno TEXT DEFAULT '',
+    estado TEXT NOT NULL DEFAULT 'Entregado' CHECK (estado IN ('Entregado', 'Calificado', 'Observado')),
+    nota NUMERIC(4, 2) CHECK (nota IS NULL OR (nota >= 0 AND nota <= 20)),
+    comentario_docente TEXT DEFAULT '',
+    entregado_en TIMESTAMPTZ DEFAULT NOW(),
+    calificado_en TIMESTAMPTZ,
+    CONSTRAINT uq_tarea_estudiante UNIQUE (tarea_id, estudiante_id)
+);
+
+-- 16. ANUNCIOS ACADÉMICOS Y COMUNICADOS
+CREATE TABLE IF NOT EXISTS anuncios (
+    id TEXT PRIMARY KEY,
+    curso_id TEXT NOT NULL REFERENCES courses(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    ciclo_id TEXT REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    curso TEXT NOT NULL,
+    titulo TEXT NOT NULL,
+    contenido TEXT NOT NULL,
+    prioridad TEXT DEFAULT 'Normal',
+    docente_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docente TEXT NOT NULL,
+    archivo_url TEXT,
+    archivo_path TEXT,
+    archivo_nombre TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 17. MENSAJERÍA Y TUTORÍA BIDIRECCIONAL
+CREATE TABLE IF NOT EXISTS mensajes (
+    id TEXT PRIMARY KEY,
+    estudiante_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    estudiante_nombre TEXT NOT NULL,
+    estudiante_correo TEXT NOT NULL,
+    estudiante_carrera TEXT DEFAULT '',
+    docente_id TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    docente_nombre TEXT NOT NULL,
+    curso_id TEXT REFERENCES courses(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    curso TEXT NOT NULL,
+    mensaje TEXT NOT NULL,
+    fecha TEXT,
+    estado TEXT DEFAULT 'Pendiente',
+    respuesta TEXT,
+    fecha_respuesta TEXT,
+    destinatario_tipo TEXT DEFAULT 'docente',
+    destinatario_id TEXT,
+    destinatario_nombre TEXT,
+    destinatario_correo TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 18. SIMULACROS TIPO EXAMEN DE ADMISIÓN Y RANKING (Fase 6)
+CREATE TABLE IF NOT EXISTS simulacros (
+    id TEXT PRIMARY KEY,
+    titulo TEXT NOT NULL,
+    descripcion TEXT DEFAULT '',
+    ciclo_id TEXT REFERENCES ciclos_academicos(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    area_id TEXT REFERENCES areas_academicas(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    duracion_minutos INTEGER NOT NULL DEFAULT 120 CHECK (duracion_minutos > 0),
+    pts_correcta NUMERIC(6, 3) NOT NULL DEFAULT 20.000,
+    pts_incorrecta NUMERIC(6, 3) NOT NULL DEFAULT -1.125,
+    pts_blanco NUMERIC(6, 3) NOT NULL DEFAULT 0.000,
+    fecha_inicio TIMESTAMPTZ DEFAULT NOW(),
+    fecha_fin TIMESTAMPTZ,
+    estado TEXT NOT NULL DEFAULT 'Publicado' CHECK (estado IN ('Borrador', 'Publicado', 'Cerrado')),
+    creado_por TEXT REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS simulacro_preguntas (
+    id TEXT PRIMARY KEY,
+    simulacro_id TEXT NOT NULL REFERENCES simulacros(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    orden INTEGER NOT NULL DEFAULT 1,
+    asignatura TEXT NOT NULL,
+    enunciado TEXT NOT NULL,
+    opciones JSONB NOT NULL DEFAULT '[]'::jsonb, -- [{"clave":"A","texto":"..."}, ...]
+    respuesta_correcta TEXT NOT NULL CHECK (respuesta_correcta IN ('A', 'B', 'C', 'D', 'E')),
+    explicacion TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS simulacro_intentos (
+    id TEXT PRIMARY KEY,
+    simulacro_id TEXT NOT NULL REFERENCES simulacros(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    estudiante_id TEXT NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    estudiante_nombre TEXT NOT NULL,
+    carrera_objetivo TEXT DEFAULT '',
+    inicio_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    entregado_en TIMESTAMPTZ,
+    estado TEXT NOT NULL DEFAULT 'EN_PROGRESO' CHECK (estado IN ('EN_PROGRESO', 'ENTREGADO')),
+    respuestas JSONB NOT NULL DEFAULT '{}'::jsonb,
+    correctas INTEGER DEFAULT 0,
+    incorrectas INTEGER DEFAULT 0,
+    blanco INTEGER DEFAULT 0,
+    puntaje_total NUMERIC(8, 3) DEFAULT 0,
+    CONSTRAINT uq_simulacro_estudiante UNIQUE (simulacro_id, estudiante_id)
+);
+
 -- ==============================================================================
--- SEMILLA MAESTRA INSTITUCIONAL (DATOS LIMPIOS Y NORMALIZADOS)
+-- ÍNDICES DE RENDIMIENTO EN CLAVES FORÁNEAS Y FILTROS FRECUENTES
 -- ==============================================================================
+CREATE INDEX IF NOT EXISTS idx_users_correo ON users (LOWER(correo));
+CREATE INDEX IF NOT EXISTS idx_users_rol ON users (rol);
+CREATE INDEX IF NOT EXISTS idx_courses_docente ON courses ("docenteId");
+CREATE INDEX IF NOT EXISTS idx_courses_ciclo ON courses (ciclo_id);
+CREATE INDEX IF NOT EXISTS idx_matriculas_estudiante ON matriculas (estudiante_id);
+CREATE INDEX IF NOT EXISTS idx_matriculas_ciclo ON matriculas (ciclo_id);
+CREATE INDEX IF NOT EXISTS idx_matriculas_correo ON matriculas (LOWER(correo));
+CREATE INDEX IF NOT EXISTS idx_pagos_matricula ON pagos ("matriculaId");
+CREATE INDEX IF NOT EXISTS idx_pagos_estado ON pagos (estado);
+CREATE INDEX IF NOT EXISTS idx_incidents_docente ON incidents (docenteid);
+CREATE INDEX IF NOT EXISTS idx_sesiones_clase_curso ON sesiones_clase (curso_id, estado);
+CREATE INDEX IF NOT EXISTS idx_sesiones_clase_docente ON sesiones_clase (docente_id, estado);
+CREATE INDEX IF NOT EXISTS idx_asistencia_alumnos_est ON asistencia_alumnos (estudiante_id);
+CREATE INDEX IF NOT EXISTS idx_tareas_curso ON tareas (curso_id);
+CREATE INDEX IF NOT EXISTS idx_tareas_ciclo ON tareas (ciclo_id);
+CREATE INDEX IF NOT EXISTS idx_tarea_entregas_tarea ON tarea_entregas (tarea_id);
+CREATE INDEX IF NOT EXISTS idx_tarea_entregas_est ON tarea_entregas (estudiante_id);
+CREATE INDEX IF NOT EXISTS idx_tarea_entregas_curso ON tarea_entregas (curso_id);
+CREATE INDEX IF NOT EXISTS idx_anuncios_curso ON anuncios (curso_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_docente ON mensajes (docente_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_estudiante ON mensajes (LOWER(estudiante_correo));
+CREATE INDEX IF NOT EXISTS idx_simulacro_intentos_ranking ON simulacro_intentos (simulacro_id, puntaje_total DESC);
 
--- A. USUARIOS
-INSERT INTO users (
-  id, apellidos, nombres, dni, "fechaNacimiento", correo, celular,
-  "carreraObjetivo", "areaAcademica", rol, estado,
-  "cursosAsignados", "cursosInscritos", ciclovirtual, salario
-) VALUES
-('USR-001', 'Morales Salazar', 'Roberto Carlos', '41235678', '1985-04-12', 'admin@gmail.com', '987654321', 'Dirección Académica', 'Gestión Institucional', 'admin', 'Activo', '[]'::jsonb, '[]'::jsonb, 'Semestral', 4500.00),
-('USR-002', 'Herrera Villanueva', 'Carmen Rosa', '45678912', '1988-06-20', 'c.herrera@academia.edu.pe', '987111222', 'Cátedra de Álgebra y Aritmética', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-001", "CRS-006"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
-('USR-003', 'Paredes Ruiz', 'Miguel Ángel', '48923104', '1990-09-15', 'm.paredes@academia.edu.pe', '987222333', 'Cátedra de Física e Historia', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-002", "CRS-008"]'::jsonb, '[]'::jsonb, 'Semestral', 3000.00),
-('USR-004', 'Torres Meléndez', 'Elena Sofía', '43219876', '1987-03-25', 'e.torres@academia.edu.pe', '987333444', 'Cátedra de Biología y Anatomía', 'Ciencias Médicas', 'docente', 'Activo', '["CRS-003", "CRS-007"]'::jsonb, '[]'::jsonb, 'Semestral', 3500.00),
-('USR-008', 'Torres Sánchez', 'Jesús Héctor', '47891234', '1992-11-08', 'j.torres@academia.edu.pe', '987444555', 'Cátedra de Programación (Python)', 'Programación', 'docente', 'Activo', '["CRS-004"]'::jsonb, '[]'::jsonb, 'Semestral', 3200.00),
-('USR-009', 'Pérez Ramos', 'Juan Gabriel', '46781290', '1989-07-19', 'j.perez@academia.edu.pe', '987555666', 'Cátedra de Matemática Avanzada', 'Ciencias Exactas', 'docente', 'Activo', '["CRS-005"]'::jsonb, '[]'::jsonb, 'Semestral', 3400.00),
-('USR-005', 'Flores Mendoza', 'Juan Carlos', '74839201', '2005-02-18', 'estudiante@gmail.com', '955112233', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-003"]'::jsonb, 'Semestral', 0.00),
-('USR-006', 'Quispe Alarcón', 'Valeria Sofía', '76543210', '2004-10-14', 'v.quispe@academia.edu.pe', '955223344', 'Ingeniería de Sistemas', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-004", "CRS-005"]'::jsonb, 'Semestral', 0.00),
-('USR-007', 'Gómez Pérez', 'Lucía Fernanda', '73214569', '2005-05-30', 'l.gomez@academia.edu.pe', '955334455', 'Derecho', 'Humanidades y Letras', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-007", "CRS-008"]'::jsonb, 'Semestral', 0.00),
-('USR-010', 'Flores Mendoza', 'Diego', '75849302', '2004-08-22', 'd.flores@academia.edu.pe', '955445566', 'Ingeniería Industrial', 'Ciencias Exactas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-002", "CRS-006"]'::jsonb, 'Intensivo', 0.00),
-('USR-011', 'Morales Ruiz', 'Elena', '71928374', '2005-01-09', 'e.morales@academia.edu.pe', '955556677', 'Medicina Humana', 'Ciencias Médicas', 'estudiante', 'Activo', '[]'::jsonb, '["CRS-001", "CRS-003", "CRS-007"]'::jsonb, 'Semestral', 0.00)
-ON CONFLICT (id) DO UPDATE SET
-  apellidos = EXCLUDED.apellidos, nombres = EXCLUDED.nombres, dni = EXCLUDED.dni, "fechaNacimiento" = EXCLUDED."fechaNacimiento",
-  correo = EXCLUDED.correo, celular = EXCLUDED.celular,
-  "carreraObjetivo" = EXCLUDED."carreraObjetivo", "areaAcademica" = EXCLUDED."areaAcademica", rol = EXCLUDED.rol,
-  estado = EXCLUDED.estado, "cursosAsignados" = EXCLUDED."cursosAsignados", "cursosInscritos" = EXCLUDED."cursosInscritos",
-  ciclovirtual = EXCLUDED.ciclovirtual, salario = EXCLUDED.salario;
-
--- B. CURSOS SIN CRUCES DE HORARIOS
-INSERT INTO courses (
-  id, asignatura, area, carrera, "docenteId", docente, dias,
-  "horaInicio", "horaFin", "meetUrl", repositorio, estado, ciclovirtual
-) VALUES
-('CRS-001', 'Álgebra y Funciones', 'Ciencias Exactas', 'Ingeniería de Sistemas', 'USR-002', 'Carmen Rosa Herrera Villanueva', '["Lunes", "Miércoles"]'::jsonb, '08:00', '10:00', 'https://meet.google.com/alg-fun-live', 'drive.google.com/algebra101', 'Activo', 'Semestral'),
-('CRS-002', 'Física Fundamental', 'Ciencias Exactas', 'Ingeniería de Sistemas', 'USR-003', 'Miguel Ángel Paredes Ruiz', '["Martes", "Jueves"]'::jsonb, '08:00', '10:00', 'https://meet.google.com/fis-fun-live', 'drive.google.com/fisica101', 'Activo', 'Semestral'),
-('CRS-003', 'Biología y Anatomía', 'Ciencias Médicas', 'Medicina Humana', 'USR-004', 'Elena Sofía Torres Meléndez', '["Lunes", "Viernes"]'::jsonb, '15:00', '17:00', 'https://meet.google.com/bio-ana-live', 'drive.google.com/biologia101', 'Activo', 'Semestral'),
-('CRS-004', 'Python para Ingenieros', 'Programación', 'Ingeniería de Sistemas', 'USR-008', 'Jesús Héctor Torres Sánchez', '["Lunes", "Miércoles"]'::jsonb, '10:00', '12:00', 'https://meet.google.com/py-ing-live', 'drive.google.com/python101', 'Activo', 'Semestral'),
-('CRS-005', 'Matemática II (Cálculo)', 'Ciencias Exactas', 'Ingeniería de Sistemas', 'USR-009', 'Juan Gabriel Pérez Ramos', '["Martes", "Jueves"]'::jsonb, '10:00', '12:00', 'https://meet.google.com/mat-dos-live', 'drive.google.com/mat201', 'Activo', 'Semestral'),
-('CRS-006', 'Aritmética Preuniversitaria', 'Ciencias Exactas', 'Ingeniería de Sistemas', 'USR-002', 'Carmen Rosa Herrera Villanueva', '["Viernes"]'::jsonb, '10:00', '13:00', 'https://meet.google.com/ari-pre-live', 'drive.google.com/aritmetica101', 'Activo', 'Semestral'),
-('CRS-007', 'Historia del Perú', 'Humanidades y Letras', 'Derecho', 'USR-004', 'Elena Sofía Torres Meléndez', '["Viernes"]'::jsonb, '08:00', '11:00', 'https://meet.google.com/his-per-live', 'drive.google.com/historia-peru', 'Activo', 'Semestral'),
-('CRS-008', 'Historia Universal', 'Humanidades y Letras', 'Derecho', 'USR-003', 'Miguel Ángel Paredes Ruiz', '["Sábado"]'::jsonb, '09:00', '12:00', 'https://meet.google.com/his-uni-live', 'drive.google.com/historia-universal', 'Activo', 'Semestral')
-ON CONFLICT (id) DO UPDATE SET
-  asignatura = EXCLUDED.asignatura, area = EXCLUDED.area, carrera = EXCLUDED.carrera,
-  "docenteId" = EXCLUDED."docenteId", docente = EXCLUDED.docente, dias = EXCLUDED.dias,
-  "horaInicio" = EXCLUDED."horaInicio", "horaFin" = EXCLUDED."horaFin", "meetUrl" = EXCLUDED."meetUrl",
-  repositorio = EXCLUDED.repositorio, estado = EXCLUDED.estado, ciclovirtual = EXCLUDED.ciclovirtual;
-
--- C. MATRÍCULAS
-INSERT INTO matriculas (
-  id, estudiante, dni, correo, celular, programa, ciclo, turno,
-  "fechaMatricula", "modalidadPago", "montoTotal", "montoPagado", "saldoPendiente", estado
-) VALUES
-('MAT-2026-001', 'Juan Carlos Flores Mendoza', '74839201', 'estudiante@gmail.com', '955112233', 'Medicina Humana (UNMSM)', 'Semestral 2026-I', 'Mañana', '2026-03-01', 'Cuotas', 1200.00, 800.00, 400.00, 'Al día'),
-('MAT-2026-002', 'Valeria Sofía Quispe Alarcón', '76543210', 'v.quispe@academia.edu.pe', '955223344', 'Ingeniería de Sistemas (UNI)', 'Semestral 2026-I', 'Mañana', '2026-03-02', 'Al Contado', 1800.00, 1800.00, 0.00, 'Pagado Total'),
-('MAT-2026-003', 'Lucía Fernanda Gómez Pérez', '73214569', 'l.gomez@academia.edu.pe', '955334455', 'Derecho y Ciencias Políticas (PUCP)', 'Semestral 2026-I', 'Tarde', '2026-03-03', 'Cuotas', 1400.00, 700.00, 700.00, 'Cuota Vencida'),
-('MAT-2026-004', 'Diego Flores Mendoza', '75849302', 'd.flores@academia.edu.pe', '955445566', 'Ingeniería Industrial (UNI)', 'Intensivo 2026-I', 'Mañana', '2026-03-04', 'Al Contado', 850.00, 850.00, 0.00, 'Pagado Total'),
-('MAT-2026-005', 'Elena Morales Ruiz', '71928374', 'e.morales@academia.edu.pe', '955556677', 'Medicina Humana (UNMSM)', 'Semestral 2026-I', 'Tarde', '2026-03-05', 'Cuotas', 1200.00, 400.00, 800.00, 'Pendiente')
-ON CONFLICT (id) DO UPDATE SET
-  estudiante = EXCLUDED.estudiante, dni = EXCLUDED.dni, correo = EXCLUDED.correo, celular = EXCLUDED.celular,
-  programa = EXCLUDED.programa, ciclo = EXCLUDED.ciclo, turno = EXCLUDED.turno, "fechaMatricula" = EXCLUDED."fechaMatricula",
-  modalidadPago = EXCLUDED."modalidadPago", montoTotal = EXCLUDED.montoTotal, montoPagado = EXCLUDED.montoPagado,
-  saldoPendiente = EXCLUDED.saldoPendiente, estado = EXCLUDED.estado;
-
--- D. PAGOS
-INSERT INTO pagos (
-  id, "matriculaId", estudiante, concepto, monto, metodo, operacion, comprobante, fecha, estado
-) VALUES
-('PAG-001', 'MAT-2026-001', 'Juan Carlos Flores Mendoza', 'Matrícula + Cuota 1 (Enero)', 400.00, 'Yape / Plin', 'OP-9823412', 'B001-00382', '15/01/2026 10:30 AM', 'Aprobado'),
-('PAG-002', 'MAT-2026-001', 'Juan Carlos Flores Mendoza', 'Cuota 2 (Febrero)', 400.00, 'Transferencia BCP', 'BCP-5544321', 'B001-00412', '14/02/2026 04:15 PM', 'Aprobado'),
-('PAG-003', 'MAT-2026-002', 'Valeria Sofía Quispe Alarcón', 'Pago Único Contado Anual UNI (10% Dcto)', 1800.00, 'Tarjeta Débito/Crédito', 'VISA-44021', 'B001-00395', '18/01/2026 11:20 AM', 'Aprobado'),
-('PAG-004', 'MAT-2026-003', 'Lucía Fernanda Gómez Pérez', 'Matrícula + Cuota 1 (Enero)', 350.00, 'Transferencia BBVA', 'BBVA-88219', 'B001-00401', '20/01/2026 09:40 AM', 'Aprobado'),
-('PAG-005', 'MAT-2026-003', 'Lucía Fernanda Gómez Pérez', 'Cuota 2 (Febrero)', 350.00, 'Yape / Plin', 'OP-7731209', 'B001-00450', '22/02/2026 03:50 PM', 'Aprobado'),
-('PAG-006', 'MAT-2026-004', 'Diego Flores Mendoza', 'Pago Único Intensivo Verano', 850.00, 'Transferencia BCP', 'BCP-9912301', 'B001-00422', '25/01/2026 12:10 PM', 'Aprobado'),
-('PAG-007', 'MAT-2026-005', 'Elena Morales Ruiz', 'Matrícula + Cuota 1 (Febrero)', 400.00, 'Efectivo en Caja', 'CAJA-019', 'B001-00465', '02/02/2026 10:00 AM', 'Aprobado')
-ON CONFLICT (id) DO UPDATE SET
-  "matriculaId" = EXCLUDED."matriculaId", estudiante = EXCLUDED.estudiante, concepto = EXCLUDED.concepto,
-  monto = EXCLUDED.monto, metodo = EXCLUDED.metodo, operacion = EXCLUDED.operacion,
-  comprobante = EXCLUDED.comprobante, fecha = EXCLUDED.fecha, estado = EXCLUDED.estado;
-
--- E. INCIDENCIAS
-INSERT INTO incidents (
-  id, docente, dni, correo, tipo, "fechaPresentacion", materia,
-  horario, motivo, "archivoNombre", estado, docenteid, cursoid,
-  docentepropuesto, docentereemplazo, horarioactualizado, observaciones
-) VALUES
-('INC-D01', 'Carmen Rosa Herrera Villanueva', '45678912', 'c.herrera@academia.edu.pe', 'Inasistencia', '2026-10-18', 'Álgebra y Funciones', 'Lun / Mié 08:00 - 10:00', 'Atención por emergencia médica justificada con descanso médico Essalud.', 'Certificado_Medico_Herrera.pdf', 'Aprobado', 'USR-002', 'CRS-001', 'Juan Gabriel Pérez Ramos', 'Juan Gabriel Pérez Ramos', 'Miércoles 08:00 - 10:00', 'Reemplazo cubierto y validado por Dirección Académica.'),
-('INC-D02', 'Miguel Ángel Paredes Ruiz', '48923104', 'm.paredes@academia.edu.pe', 'Tardanza', '2026-10-19', 'Física Fundamental', 'Mar / Jue 08:00 - 10:00', 'Retraso de 25 minutos por congestión en transporte público en Av. Universitaria.', NULL, 'Rechazado', 'USR-003', 'CRS-002', NULL, NULL, NULL, 'Excedió tolerancia reglamentaria (15 min). Descuento de 1h aplicado en nómina.'),
-('INC-D03', 'Elena Sofía Torres Meléndez', '43219876', 'e.torres@academia.edu.pe', 'Inasistencia', '2026-10-23', 'Biología y Anatomía', 'Lun / Vie 15:00 - 17:00', 'Participación programada en congreso nacional de Ciencias Médicas.', 'Invitacion_Congreso_Medico.pdf', 'Pendiente', 'USR-004', 'CRS-003', 'Carmen Rosa Herrera Villanueva', NULL, 'Viernes 15:00 - 17:00', 'En evaluación para aprobación de reemplazo.')
-ON CONFLICT (id) DO UPDATE SET
-  docente = EXCLUDED.docente, dni = EXCLUDED.dni, correo = EXCLUDED.correo, tipo = EXCLUDED.tipo,
-  "fechaPresentacion" = EXCLUDED."fechaPresentacion", materia = EXCLUDED.materia, horario = EXCLUDED.horario,
-  motivo = EXCLUDED.motivo, "archivoNombre" = EXCLUDED."archivoNombre", estado = EXCLUDED.estado,
-  docenteid = EXCLUDED.docenteid, cursoid = EXCLUDED.cursoid, docentepropuesto = EXCLUDED.docentepropuesto,
-  docentereemplazo = EXCLUDED.docentereemplazo, horarioactualizado = EXCLUDED.horarioactualizado,
-  observaciones = EXCLUDED.observaciones;
-
--- F. SESIONES DE ASISTENCIA
-INSERT INTO attendance_sessions (
-  id, "cursoId", asignatura, "docenteId", docente, fecha, "horaApertura", modalidad,
-  "asistentesPuntuales", tardanzas, ausentes
-) VALUES
-('ATT-SES-001', 'CRS-001', 'Álgebra y Funciones', 'USR-002', 'Carmen Rosa Herrera Villanueva', '2026-10-21', '08:00', 'Virtual en vivo', '[{"id": "USR-005", "nombre": "Juan Carlos Flores Mendoza", "hora": "08:02"}, {"id": "USR-006", "nombre": "Valeria Sofía Quispe Alarcón", "hora": "08:04"}]'::jsonb, '[{"id": "USR-007", "nombre": "Lucía Fernanda Gómez Pérez", "hora": "08:14"}]'::jsonb, '[{"id": "USR-010", "nombre": "Diego Flores Mendoza"}]'::jsonb),
-('ATT-SES-002', 'CRS-002', 'Física Fundamental', 'USR-003', 'Miguel Ángel Paredes Ruiz', '2026-10-22', '08:00', 'Virtual en vivo', '[{"id": "USR-005", "nombre": "Juan Carlos Flores Mendoza", "hora": "08:01"}, {"id": "USR-010", "nombre": "Diego Flores Mendoza", "hora": "08:05"}]'::jsonb, '[]'::jsonb, '[]'::jsonb),
-('ATT-SES-003', 'CRS-003', 'Biología y Anatomía', 'USR-004', 'Elena Sofía Torres Meléndez', '2026-10-23', '15:00', 'Virtual en vivo', '[{"id": "USR-005", "nombre": "Juan Carlos Flores Mendoza", "hora": "15:01"}, {"id": "USR-011", "nombre": "Elena Morales Ruiz", "hora": "15:03"}]'::jsonb, '[]'::jsonb, '[{"id": "USR-007", "nombre": "Lucía Fernanda Gómez Pérez"}]'::jsonb)
-ON CONFLICT (id) DO UPDATE SET
-  "cursoId" = EXCLUDED."cursoId", asignatura = EXCLUDED.asignatura, "docenteId" = EXCLUDED."docenteId",
-  docente = EXCLUDED.docente, fecha = EXCLUDED.fecha, "horaApertura" = EXCLUDED."horaApertura",
-  modalidad = EXCLUDED.modalidad, "asistentesPuntuales" = EXCLUDED."asistentesPuntuales",
-  tardanzas = EXCLUDED.tardanzas, ausentes = EXCLUDED.ausentes;
-
--- G. CONFIGURACIÓN
-INSERT INTO configuracion (
-  id, institucion_nombre, institucion_ruc, institucion_direccion, institucion_telefono,
-  institucion_correo, ciclo_vigente, ciclo_inicio, ciclo_fin, ciclo_estado,
-  tarifa_hora_docente, tolerancia_tardanza_min, horas_descuento_inasistencia
-) VALUES (
-  'general', 'Academia Preuniversitaria S.A.C.', '20608912345', 'Av. Universitaria 1234, Lima, Perú',
-  '+51 987 654 321', 'contacto@academia.edu.pe', 'Semestral 2026-I', '2026-01-15', '2026-07-31',
-  'En Curso', 50.00, 15, 2.00
-) ON CONFLICT (id) DO NOTHING;
-
--- H. ÁREAS ACADÉMICAS
-INSERT INTO areas_academicas (id, codigo, nombre, descripcion, color, estado) VALUES
-('AREA-EXA', 'CIENCIAS-EXACTAS', 'Ciencias Exactas e Ingenierías', 'Matemáticas, Física, Química, Computación e ingenierías afines', '#2563EB', 'Activo'),
-('AREA-MED', 'CIENCIAS-MEDICAS', 'Ciencias Médicas y de la Salud', 'Medicina Humana, Enfermería, Odontología, Biología y afines', '#DC2626', 'Activo'),
-('AREA-HUM', 'HUMANIDADES', 'Humanidades y Ciencias Sociales', 'Derecho, Literatura, Historia, Filosofía y afines', '#7C3AED', 'Activo'),
-('AREA-GES', 'GESTION', 'Gestión Institucional y Empresarial', 'Administración, Economía, Contabilidad y Dirección', '#059669', 'Activo')
-ON CONFLICT (id) DO UPDATE SET
-  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion, color = EXCLUDED.color, estado = EXCLUDED.estado;
-
--- I. CARRERAS PROFESIONALES
-INSERT INTO carreras (id, codigo, nombre, area_id, descripcion, duracion_anios, grado_academico, universidades_objetivo, estado) VALUES
-('CAR-001', 'MED-HUM', 'Medicina Humana', 'AREA-MED', 'Programa de formación médica y ciencias de la salud con alto puntaje de admisión.', 7, 'Médico Cirujano', '["UNMSM", "UPCH", "UNFV"]'::jsonb, 'Activo'),
-('CAR-002', 'ING-SIS', 'Ingeniería de Sistemas', 'AREA-EXA', 'Ingeniería orientada al desarrollo de software, cloud computing y ciencias computacionales.', 5, 'Ingeniero de Sistemas', '["UNI", "UNMSM", "PUCP"]'::jsonb, 'Activo'),
-('CAR-003', 'DER-POL', 'Derecho y Ciencias Políticas', 'AREA-HUM', 'Ciencias jurídicas, legislación pública y litigio civil y penal.', 6, 'Abogado', '["PUCP", "UNMSM", "UNIFE"]'::jsonb, 'Activo'),
-('CAR-004', 'ING-IND', 'Ingeniería Industrial', 'AREA-EXA', 'Optimización de procesos productivos, cadena de suministro y dirección de operaciones.', 5, 'Ingeniero Industrial', '["UNI", "UNMSM", "ULIMA"]'::jsonb, 'Activo')
-ON CONFLICT (id) DO UPDATE SET
-  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, area_id = EXCLUDED.area_id, descripcion = EXCLUDED.descripcion,
-  duracion_anios = EXCLUDED.duracion_anios, grado_academico = EXCLUDED.grado_academico,
-  universidades_objetivo = EXCLUDED.universidades_objetivo, estado = EXCLUDED.estado;
-
--- J. TIPOS DE CICLO (MODALIDADES)
-INSERT INTO tipos_ciclo (id, codigo, nombre, duracion_semanas, modalidad, descripcion, estado) VALUES
-('TCIC-SEM', 'SEMESTRAL', 'Semestral', 24, 'Virtual', 'Preparación semestral intensiva con desarrollo temático completo.', 'Activo'),
-('TCIC-ANU', 'ANUAL', 'Anual', 44, 'Virtual', 'Preparación anual integral desde nivel cero hasta avanzado.', 'Activo'),
-('TCIC-INT', 'INTENSIVO', 'Intensivo', 8, 'Virtual', 'Ciclo rápido y condensado de verano o repaso preuniversitario.', 'Activo'),
-('TCIC-REP', 'REPASO', 'Repaso / Super Intensivo', 6, 'Virtual', 'Resolución masiva de exámenes tipo admisión y simulacros.', 'Activo'),
-('TCIC-ESC', 'ESCOLAR', 'Reforzamiento Escolar', 12, 'Virtual', 'Nivelación y fortalecimiento para estudiantes de 4to y 5to de secundaria.', 'Activo')
-ON CONFLICT (id) DO UPDATE SET
-  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, duracion_semanas = EXCLUDED.duracion_semanas,
-  modalidad = EXCLUDED.modalidad, descripcion = EXCLUDED.descripcion, estado = EXCLUDED.estado;
-
--- K. CICLOS ACADÉMICOS (PERIODOS VIGENTES)
-INSERT INTO ciclos_academicos (id, codigo, nombre, tipo_ciclo_id, anio, periodo, fecha_inicio, fecha_fin, costo_matricula, costo_pension_mensual, costo_total_contado, es_vigente, estado) VALUES
-('CIC-2026-SEM-1', '2026-SEM-I', 'Semestral 2026-I', 'TCIC-SEM', 2026, 'I', '2026-01-15', '2026-07-31', 100.00, 300.00, 1800.00, true, 'En Curso'),
-('CIC-2026-ANU', '2026-ANU', 'Anual 2026', 'TCIC-ANU', 2026, 'Anual', '2026-03-01', '2026-12-20', 120.00, 280.00, 2500.00, false, 'En Curso'),
-('CIC-2026-INT-1', '2026-INT-I', 'Intensivo 2026-I', 'TCIC-INT', 2026, 'Verano', '2026-01-05', '2026-02-28', 80.00, 400.00, 850.00, false, 'Finalizado'),
-('CIC-2026-SEM-2', '2026-SEM-II', 'Semestral 2026-II', 'TCIC-SEM', 2026, 'II', '2026-08-15', '2026-12-31', 100.00, 300.00, 1800.00, false, 'Planificado')
-ON CONFLICT (id) DO UPDATE SET
-  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, tipo_ciclo_id = EXCLUDED.tipo_ciclo_id,
-  anio = EXCLUDED.anio, periodo = EXCLUDED.periodo, fecha_inicio = EXCLUDED.fecha_inicio, fecha_fin = EXCLUDED.fecha_fin,
-  costo_matricula = EXCLUDED.costo_matricula, costo_pension_mensual = EXCLUDED.costo_pension_mensual,
-  costo_total_contado = EXCLUDED.costo_total_contado, es_vigente = EXCLUDED.es_vigente, estado = EXCLUDED.estado;
-
--- L. TURNOS
-INSERT INTO turnos (id, codigo, nombre, hora_inicio, hora_fin, estado) VALUES
-('TUR-MAN', 'MANANA', 'Mañana', '08:00', '13:00', 'Activo'),
-('TUR-TAR', 'TARDE', 'Tarde', '14:00', '19:00', 'Activo'),
-('TUR-NOC', 'NOCHE', 'Noche', '18:00', '22:00', 'Activo')
-ON CONFLICT (id) DO UPDATE SET
-  codigo = EXCLUDED.codigo, nombre = EXCLUDED.nombre, hora_inicio = EXCLUDED.hora_inicio,
-  hora_fin = EXCLUDED.hora_fin, estado = EXCLUDED.estado;
-
--- M. OFERTA DE VACANTES POR CICLO
-INSERT INTO ciclo_carreras (id, ciclo_id, carrera_id, vacantes_totales, vacantes_ocupadas, estado) VALUES
-('OFE-2026-SEM1-MED', 'CIC-2026-SEM-1', 'CAR-001', 50, 42, 'Disponible'),
-('OFE-2026-SEM1-SIS', 'CIC-2026-SEM-1', 'CAR-002', 45, 38, 'Disponible'),
-('OFE-2026-SEM1-DER', 'CIC-2026-SEM-1', 'CAR-003', 40, 29, 'Disponible'),
-('OFE-2026-SEM1-IND', 'CIC-2026-SEM-1', 'CAR-004', 35, 20, 'Disponible')
-ON CONFLICT (id) DO UPDATE SET
-  ciclo_id = EXCLUDED.ciclo_id, carrera_id = EXCLUDED.carrera_id, vacantes_totales = EXCLUDED.vacantes_totales,
-  vacantes_ocupadas = EXCLUDED.vacantes_ocupadas, estado = EXCLUDED.estado;
-
+-- ==============================================================================
+-- SEGURIDAD SUPABASE: HABILITAR ROW LEVEL SECURITY EN TODAS LAS TABLAS PÚBLICAS
+-- (El backend FastAPI opera autenticado como rol privilegiado tras validar RBAC;
+--  esto bloquea accesos anónimos directos por PostgREST sin autorización).
+-- ==============================================================================
+ALTER TABLE areas_academicas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE carreras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipos_ciclo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ciclos_academicos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE turnos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ciclo_carreras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matriculas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pagos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE incidents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meet_attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sesiones_clase ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recesos_clase ENABLE ROW LEVEL SECURITY;
+ALTER TABLE asistencia_alumnos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tareas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tarea_entregas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE anuncios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mensajes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE simulacros ENABLE ROW LEVEL SECURITY;
+ALTER TABLE simulacro_preguntas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE simulacro_intentos ENABLE ROW LEVEL SECURITY;

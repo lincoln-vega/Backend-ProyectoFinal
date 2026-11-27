@@ -1,3 +1,6 @@
+import os
+os.environ["TESTING"] = "1"
+
 from fastapi import Request
 from fastapi.testclient import TestClient
 from main import app
@@ -865,6 +868,574 @@ def test_estudiante_no_puede_responder_mensajes():
     payload = {"respuesta": "Intento de respuesta de estudiante"}
     res = client.patch("/mensajes/MSG-TEST-UNIT-01/respuesta", json=payload, headers=ESTUDIANTE_HEADERS)
     assert res.status_code == 403
+
+
+# --- PRUEBAS FASE 1: MIGRACIÓN SUPABASE (HEALTH, CONFIGURACIÓN, AUDITORÍA MEET Y STORAGE) ---
+
+def test_health_db_endpoint():
+    """Valida que el endpoint de keep-alive /health/db responda 200."""
+    res = client.get("/health/db")
+    assert res.status_code == 200
+    assert "connected" in res.json()
+
+
+def test_configuracion_lectura_y_escritura_solo_admin():
+    """Valida lectura de configuración institucional y restricción de edición solo a Admin."""
+    res_get = client.get("/configuracion", headers=ESTUDIANTE_HEADERS)
+    assert res_get.status_code == 200
+    assert "institucion_nombre" in res_get.json()
+
+    res_forbidden = client.put(
+        "/configuracion",
+        json={"institucion_nombre": "Intento No Autorizado"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert res_forbidden.status_code == 403
+
+    res_ok = client.put(
+        "/configuracion",
+        json={"institucion_nombre": "Academia Preuniversitaria Alto Rendimiento", "tolerancia_tardanza_min": 10},
+        headers=ADMIN_HEADERS,
+    )
+    assert res_ok.status_code == 200
+    assert res_ok.json()["tolerancia_tardanza_min"] == 10
+
+
+def test_auditoria_meet_entrada_salida_reemplaza_edge_functions():
+    """Valida los nuevos endpoints REST de entrada/salida/historial Meet sin InsForge Functions."""
+    res_est = client.post("/asistencia/meet/entrada", json={"cursoId": "CRS-001"}, headers=ESTUDIANTE_HEADERS)
+    assert res_est.status_code == 403
+
+    res_in = client.post("/asistencia/meet/entrada", json={"cursoId": "CRS-001"}, headers=DOCENTE_HEADERS)
+    assert res_in.status_code == 201
+    assert res_in.json()["estado"] == "EN_PROGRESO"
+
+    res_out = client.post("/asistencia/meet/salida", json={"cursoId": "CRS-001"}, headers=DOCENTE_HEADERS)
+    assert res_out.status_code == 200
+    assert res_out.json()["estado"] == "FINALIZADA"
+
+    res_hist = client.get("/asistencia/meet/historial/CRS-001", headers=DOCENTE_HEADERS)
+    assert res_hist.status_code == 200
+    assert len(res_hist.json()) >= 1
+
+
+def test_storage_upload_valida_bucket_y_formato():
+    """Valida que el guardián de Supabase Storage rechace buckets desconocidos y extensiones ejecutables."""
+    res_bad_bucket = client.post(
+        "/storage/upload/bucket-falso",
+        files={"file": ("tarea.pdf", b"%PDF-1.4 demo", "application/pdf")},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert res_bad_bucket.status_code == 400
+
+    res_bad_ext = client.post(
+        "/storage/upload/tareas-entregas",
+        files={"file": ("malware.exe", b"MZ0000", "application/octet-stream")},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert res_bad_ext.status_code == 400
+
+
+def test_auth_account_solo_admin(monkeypatch):
+    """Valida que la creación de cuentas en Supabase Auth requiera rol Admin."""
+    res_denied = client.post(
+        "/usuarios/auth-account",
+        json={"correo": "nuevo@academia.edu.pe", "password": "Password123", "rol": "estudiante"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert res_denied.status_code == 403
+
+    monkeypatch.setattr(
+        usuarios_router,
+        "create_supabase_auth_user",
+        lambda email, password, full_name="", role="estudiante": {
+            "authUserId": "00000000-0000-4000-8000-000000000099",
+            "emailVerified": True,
+            "requiresEmailVerification": False,
+        },
+    )
+    res_ok = client.post(
+        "/usuarios/auth-account",
+        json={"correo": "nuevo@academia.edu.pe", "password": "Password123", "nombre": "Alumno Nuevo", "rol": "estudiante"},
+        headers=ADMIN_HEADERS,
+    )
+    assert res_ok.status_code == 201
+    assert res_ok.json()["authUserId"] == "00000000-0000-4000-8000-000000000099"
+
+
+# --- PRUEBAS FASE 2: FILTROS REALES POR CICLO / PERIODO Y MATRÍCULAS MULTI-CICLO ---
+
+def test_filtros_por_ciclo_en_cursos_matriculas_tareas_y_anuncios():
+    """Valida que los endpoints acepten ?ciclo_id= y ?correo= sin romper compatibilidad."""
+    res_cursos = client.get("/horarios/cursos?ciclo_id=CIC-INEXISTENTE", headers=ESTUDIANTE_HEADERS)
+    assert res_cursos.status_code == 200
+    assert res_cursos.json() == []
+
+    res_mats = client.get("/matriculas/?correo=noexiste@academia.edu.pe", headers=ESTUDIANTE_HEADERS)
+    assert res_mats.status_code == 200
+    assert res_mats.json() == []
+
+    res_tareas = client.get("/tareas/?ciclo_id=CIC-INEXISTENTE", headers=ESTUDIANTE_HEADERS)
+    assert res_tareas.status_code == 200
+    assert res_tareas.json() == []
+
+    res_anns = client.get("/anuncios/?ciclo_id=CIC-INEXISTENTE", headers=ESTUDIANTE_HEADERS)
+    assert res_anns.status_code == 200
+    assert res_anns.json() == []
+
+
+# --- PRUEBAS FASE 3: MOTOR DE CLASES EN VIVO, PERMANENCIA 2DO PLANO Y ASISTENCIA HÍBRIDA ---
+
+def test_clases_vivo_rbac_bloquea_estudiante_al_iniciar():
+    """Un estudiante nunca puede abrir una sesión docente en vivo."""
+    res = client.post("/clases-vivo/iniciar", json={"cursoId": "CRS-001"}, headers=ESTUDIANTE_HEADERS)
+    assert res.status_code == 403
+
+
+def test_clases_vivo_ciclo_completo_pase_lista_y_tope_horas(monkeypatch):
+    """
+    Valida el flujo completo de Fase 3:
+    1. Inicio idempotente y bloqueo 409 si intenta abrir otra sección sin cerrar la actual.
+    2. Tardanza docente (>10 min) genera incidencia automática.
+    3. Ingreso alumno AUTO_MEET, latido anti-spam, alerta de abandono y subsanación PASE_LISTA.
+    4. Tope contractual al finalizar: 135 min reales en bloque de 120 min -> 120.0 min computables.
+    """
+    from datetime import datetime
+    import routers.clases_vivo as cv
+    from database import load_db, save_db
+
+    # Asegurar que existan dos cursos de prueba en db.json
+    db = load_db()
+    cursos = db.setdefault("courses", [])
+    if not any(c.get("id") == "CRS-TEST-F3A" for c in cursos):
+        cursos.append({
+            "id": "CRS-TEST-F3A",
+            "asignatura": "Álgebra Fase 3",
+            "docenteId": "USR-107",
+            "docente": "Docente Test",
+            "dias": ["Lunes"],
+            "horaInicio": "08:00",
+            "horaFin": "10:00",
+            "meetUrl": "https://meet.google.com/test-f3a",
+            "estado": "Activo",
+        })
+    if not any(c.get("id") == "CRS-TEST-F3B" for c in cursos):
+        cursos.append({
+            "id": "CRS-TEST-F3B",
+            "asignatura": "Física Fase 3",
+            "docenteId": "USR-107",
+            "docente": "Docente Test",
+            "dias": ["Lunes"],
+            "horaInicio": "10:00",
+            "horaFin": "12:00",
+            "meetUrl": "https://meet.google.com/test-f3b",
+            "estado": "Activo",
+        })
+    # Limpiar sesiones previas de este docente de prueba
+    db["sesionesClase"] = [
+        s for s in db.get("sesionesClase", []) if s.get("docente_id") != "USR-107"
+    ]
+    save_db(db)
+
+    # 1. Docente inicia a las 08:18 AM (18 min tarde > 10 min tolerancia)
+    t_inicio = datetime(2026, 11, 27, 8, 18, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_inicio)
+
+    r_start = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3A"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_start.status_code == 201
+    ses = r_start.json()
+    sesion_id = ses["id"]
+    assert ses["estado"] == "EN_CLASE"
+    assert ses["minutosTardanzaDocente"] == 18
+    assert ses["minutosBloqueProgramado"] == 120
+
+    # Llamada repetida sobre el mismo curso es idempotente (resiste F5)
+    r_idem = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3A"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_idem.status_code == 201
+    assert r_idem.json()["id"] == sesion_id
+
+    # Abrir OTRA sección distinta mientras CRS-TEST-F3A sigue activa devuelve 409
+    r_conflict = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3B"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_conflict.status_code == 409
+
+    # 2. Estudiante se une a los 3 minutos de iniciada la clase (Puntual <= 10 min)
+    t_join = datetime(2026, 11, 27, 8, 21, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_join)
+    r_join = client.post(f"/clases-vivo/{sesion_id}/unirse", headers=ESTUDIANTE_HEADERS)
+    assert r_join.status_code == 200
+    assert r_join.json()["estado"] == "Presente"
+    assert r_join.json()["ventanaAbierta"] is True
+
+    # Latido inmediato (<45s) no infla minutos (protección anti-spam)
+    r_spam = client.post(
+        f"/clases-vivo/{sesion_id}/latido",
+        json={"ventanaAbierta": True},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert r_spam.status_code == 200
+    assert r_spam.json()["minutosPermanencia"] == 1
+
+    # Latido legítimo 60s después incrementa permanencia
+    t_beat = datetime(2026, 11, 27, 8, 22, 5, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_beat)
+    r_beat = client.post(
+        f"/clases-vivo/{sesion_id}/latido",
+        json={"ventanaAbierta": True},
+        headers=ESTUDIANTE_HEADERS,
+    )
+    assert r_beat.status_code == 200
+    assert r_beat.json()["minutosPermanencia"] == 2
+
+    # Estudiante cierra la pestaña de Meet al minuto 2 (< 15 min) -> dispara alertaAbandono
+    t_close_win = datetime(2026, 11, 27, 8, 22, 30, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_close_win)
+    client.post(
+        f"/clases-vivo/{sesion_id}/latido",
+        json={"ventanaAbierta": False},
+        headers=ESTUDIANTE_HEADERS,
+    )
+
+    r_lista = client.get(f"/clases-vivo/{sesion_id}/lista", headers=DOCENTE_HEADERS)
+    assert r_lista.status_code == 200
+    est_item = next(
+        e for e in r_lista.json()["estudiantes"] if e["estudianteId"] == "USR-108"
+    )
+    assert est_item["alertaAbandono"] is True
+
+    # Docente subsana manualmente porque el alumno avisó que pasó al celular (PASE_LISTA)
+    r_override = client.put(
+        f"/clases-vivo/{sesion_id}/lista/USR-108",
+        json={"estado": "Presente", "observacion": "Conectado desde móvil"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_override.status_code == 200
+    assert r_override.json()["origen"] == "PASE_LISTA"
+
+    # 3. Docente cierra a las 10:33 AM (135 min reales brutos > 120 min bloque -> tope en 120.0)
+    t_fin = datetime(2026, 11, 27, 10, 33, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_fin)
+    r_fin = client.post(f"/clases-vivo/{sesion_id}/finalizar", headers=DOCENTE_HEADERS)
+    assert r_fin.status_code == 200
+    fin_data = r_fin.json()
+    assert fin_data["estado"] == "FINALIZADA"
+    assert fin_data["minutosRealesBrutos"] == 135.0
+    assert fin_data["minutosEfectivosDictados"] == 120.0
+
+    # Resumen de asistencia real por curso refleja la sesión finalizada
+    r_resumen = client.get("/clases-vivo/resumen-asistencia", headers=ESTUDIANTE_HEADERS)
+    assert r_resumen.status_code == 200
+    assert r_resumen.json()["cursos"]["CRS-TEST-F3A"]["porcentaje"] == 100
+
+
+def test_clases_vivo_autocierre_por_olvido_y_material_en_anuncios(monkeypatch):
+    """
+    Valida que si el docente olvida cerrar la clase pasados +20 min del fin del bloque,
+    el sistema la auto-cierre al tope del bloque; y que anuncios soporte archivo adjunto.
+    """
+    from datetime import datetime
+    import routers.clases_vivo as cv
+
+    t_ini = datetime(2026, 11, 27, 10, 2, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_ini)
+    r_start = client.post(
+        "/clases-vivo/iniciar",
+        json={"cursoId": "CRS-TEST-F3B"},
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_start.status_code == 201
+
+    # Publicar separata en clase vía /anuncios/
+    r_ann = client.post(
+        "/anuncios/",
+        json={
+            "cursoId": "CRS-TEST-F3B",
+            "curso": "Física Fase 3",
+            "titulo": "Separata Dinámica Lineal",
+            "contenido": "Resolver problemas 1 al 10.",
+            "prioridad": "Alta",
+            "docente": "Docente Test",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/materiales-clase/sep.pdf",
+            "archivoNombre": "Separata_Dinamica.pdf",
+        },
+        headers=DOCENTE_HEADERS,
+    )
+    assert r_ann.status_code == 201
+    assert r_ann.json()["archivoNombre"] == "Separata_Dinamica.pdf"
+
+    # Avanzar reloj a las 12:25 PM (> 12:00 PM + 20 min gracia) -> debe auto-cerrarse
+    t_after = datetime(2026, 11, 27, 12, 25, 0, tzinfo=cv.LIMA_TZ)
+    monkeypatch.setattr(cv, "_now_lima", lambda: t_after)
+    r_activa = client.get("/clases-vivo/activa?curso_id=CRS-TEST-F3B", headers=DOCENTE_HEADERS)
+    assert r_activa.status_code == 200
+    assert r_activa.json()["activa"] is None
+
+
+# --- PRUEBAS FASE 4: TAREAS CON ENTREGA INDIVIDUAL REAL Y CALIFICACIÓN DOCENTE (0-20) ---
+
+def test_fase4_rbac_bloquea_estudiante_en_parche_global_y_calificacion():
+    """Un estudiante no puede alterar una tarea global ni ver/calificar entregas de otros."""
+    r_create = client.post(
+        "/tareas/",
+        headers=DOCENTE_HEADERS,
+        json={
+            "cursoId": "CRS-001",
+            "curso": "Álgebra Preuniversitaria",
+            "titulo": "Tarea Protegida RBAC",
+            "fechaLimite": "2026-12-06",
+            "docente": "Docente Test",
+        },
+    )
+    assert r_create.status_code == 201
+    tid = r_create.json()["id"]
+
+    assert client.patch(f"/tareas/{tid}", headers=ESTUDIANTE_HEADERS, json={"estado": "Entregado"}).status_code == 403
+    assert client.get(f"/tareas/{tid}/entregas", headers=ESTUDIANTE_HEADERS).status_code == 403
+    assert (
+        client.patch(
+            f"/tareas/{tid}/calificar/USR-108",
+            headers=ESTUDIANTE_HEADERS,
+            json={"nota": 20, "comentarioDocente": "Auto-nota"},
+        ).status_code
+        == 403
+    )
+
+
+def test_fase4_aislamiento_entregas_dos_alumnos_reemplazo_y_calificacion(monkeypatch):
+    """
+    Verifica que:
+    1) La entrega de Alumno 1 NO afecte el estado de Alumno 2.
+    2) Alumno 1 pueda reemplazar su archivo mientras esté 'Entregado'.
+    3) Docente vea el consolidado, valide rango 0-20, califique con 18.5 y bloquee re-entregas salvo 'Observado'.
+    """
+    est2_token = "test-token-estudiante-dos-f4"
+    monkeypatch.setitem(
+        _TEST_USERS,
+        est2_token,
+        {
+            "id": "USR-F4-EST2",
+            "correo": "alumno2.f4@academia.edu.pe",
+            "rol": "estudiante",
+            "nombres": "Valeria",
+            "apellidos": "Quispe",
+        },
+    )
+    est2_headers = {"Authorization": f"Bearer {est2_token}"}
+
+    # Docente crea tarea con guía PDF adjunta
+    r_task = client.post(
+        "/tareas/",
+        headers=DOCENTE_HEADERS,
+        json={
+            "cursoId": "CRS-001",
+            "curso": "Álgebra Preuniversitaria",
+            "tipo": "Práctica Calificada",
+            "titulo": "Inecuaciones de Grado Superior",
+            "descripcion": "Subir desarrollo completo en PDF.",
+            "fechaLimite": "2026-12-08",
+            "puntos": "20 pts",
+            "docente": "Docente Test",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/materiales-clase/guia.pdf",
+            "archivoPath": "CRS-001/guia_inecuaciones.pdf",
+            "archivoNombre": "Guia_Inecuaciones.pdf",
+        },
+    )
+    assert r_task.status_code == 201
+    tarea_id = r_task.json()["id"]
+    assert r_task.json()["archivoNombre"] == "Guia_Inecuaciones.pdf"
+
+    # Alumno 1 sube su entrega v1
+    r_sub1 = client.post(
+        f"/tareas/{tarea_id}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoPath": "CRS-001/USR-108_v1.pdf",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/v1.pdf",
+            "archivoNombre": "solucion_v1.pdf",
+            "tamanoBytes": 84500,
+            "comentarioAlumno": "Primera versión.",
+        },
+    )
+    assert r_sub1.status_code == 201
+    assert r_sub1.json()["estado"] == "Entregado"
+
+    # Alumno 2 consulta sus entregas -> NO debe figurar entregada para él
+    r_mis_est2 = client.get("/tareas/mis-entregas", headers=est2_headers)
+    assert r_mis_est2.status_code == 200
+    assert all(e["tareaId"] != tarea_id for e in r_mis_est2.json())
+
+    # Alumno 1 corrige su archivo antes de ser calificado (UPSERT sin duplicar filas)
+    r_sub1_v2 = client.post(
+        f"/tareas/{tarea_id}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoPath": "CRS-001/USR-108_v2.pdf",
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/v2.pdf",
+            "archivoNombre": "solucion_final_v2.pdf",
+            "tamanoBytes": 120400,
+            "comentarioAlumno": "Versión corregida con el ejercicio 10.",
+        },
+    )
+    assert r_sub1_v2.status_code == 201
+    assert r_sub1_v2.json()["archivoNombre"] == "solucion_final_v2.pdf"
+
+    # Docente consulta bandeja de entregas de la tarea
+    r_bandeja = client.get(f"/tareas/{tarea_id}/entregas", headers=DOCENTE_HEADERS)
+    assert r_bandeja.status_code == 200
+    bandeja = r_bandeja.json()
+    assert bandeja["resumen"]["entregados"] == 1
+    assert bandeja["resumen"]["pendientesCalificar"] == 1
+
+    # Validación de rango vigesimal (0 a 20)
+    r_bad_grade = client.patch(
+        f"/tareas/{tarea_id}/calificar/USR-108",
+        headers=DOCENTE_HEADERS,
+        json={"nota": 24.5, "comentarioDocente": "Nota fuera de escala"},
+    )
+    assert r_bad_grade.status_code == 400
+
+    # Docente califica con 18.5 / 20
+    r_grade = client.patch(
+        f"/tareas/{tarea_id}/calificar/USR-108",
+        headers=DOCENTE_HEADERS,
+        json={
+            "nota": 18.5,
+            "comentarioDocente": "Excelente procedimiento por puntos críticos.",
+            "estado": "Calificado",
+        },
+    )
+    assert r_grade.status_code == 200
+    assert r_grade.json()["nota"] == 18.5
+    assert r_grade.json()["estado"] == "Calificado"
+
+    # Alumno 1 ve su nota real en /tareas/mis-entregas y ya NO puede sobrescribir una tarea calificada
+    r_mis_est1 = client.get("/tareas/mis-entregas", headers=ESTUDIANTE_HEADERS)
+    assert r_mis_est1.status_code == 200
+    mi_entrega = next(e for e in r_mis_est1.json() if e["tareaId"] == tarea_id)
+    assert mi_entrega["nota"] == 18.5
+    assert "puntos críticos" in mi_entrega["comentarioDocente"]
+
+    r_locked = client.post(
+        f"/tareas/{tarea_id}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/v3.pdf",
+            "archivoNombre": "intento_tardio.pdf",
+        },
+    )
+    assert r_locked.status_code == 409
+
+
+def test_fase4_bloquea_entrega_en_ciclo_finalizado():
+    """Impide registrar entregas en tareas pertenecientes a un ciclo académico Finalizado (Modo Historial)."""
+    from database import load_db, save_db
+
+    db = load_db()
+    ciclos = db.setdefault("ciclos_academicos", [])
+    if not any(c.get("id") == "CIC-HIST-F4" for c in ciclos):
+        ciclos.append({
+            "id": "CIC-HIST-F4",
+            "codigo": "VER-HIST-F4",
+            "nombre": "Verano Cerrado F4",
+            "estado": "Finalizado",
+            "es_vigente": False,
+        })
+        save_db(db)
+
+    r_task = client.post(
+        "/tareas/",
+        headers=DOCENTE_HEADERS,
+        json={
+            "cursoId": "CRS-001",
+            "cicloId": "CIC-HIST-F4",
+            "curso": "Álgebra Histórica",
+            "titulo": "Tarea de Ciclo Cerrado",
+            "fechaLimite": "2026-03-01",
+            "docente": "Docente Test",
+        },
+    )
+    assert r_task.status_code == 201
+    tid = r_task.json()["id"]
+
+    r_sub = client.post(
+        f"/tareas/{tid}/entregar",
+        headers=ESTUDIANTE_HEADERS,
+        json={
+            "archivoUrl": "https://hgasvotbwatoznnizmzr.supabase.co/storage/v1/object/sign/tareas-entregas/hist.pdf",
+            "archivoNombre": "hist.pdf",
+        },
+    )
+    assert r_sub.status_code == 400
+
+
+# --- PRUEBAS MOTOR DE REPORTES PDF (ESTILO JASPERREPORTS) Y AISLAMIENTO RBAC ---
+
+def test_reportes_pdf_binario_real_y_json_para_admin():
+    """Verifica que los 5 reportes parametrizados generen PDFs válidos (%PDF-) y payloads JSON coherentes."""
+    r_exec = client.get("/reportes/resumen-ejecutivo", headers=ADMIN_HEADERS)
+    assert r_exec.status_code == 200
+    exec_body = r_exec.json()
+    assert "kpis" in exec_body and "indicadoresPorcentuales" in exec_body
+    assert "distribucionCiclos" in exec_body and "distribucionAreas" in exec_body
+
+    r_users = client.get("/usuarios/", headers=ADMIN_HEADERS)
+    est_user = next(
+        (u for u in r_users.json() if str(u.get("rol") or "").lower() == "estudiante"),
+        r_users.json()[0],
+    )
+
+    endpoints = [
+        "/reportes/notas",
+        f"/reportes/kardex-alumno/{est_user['id']}",
+        "/reportes/asistencia",
+        "/reportes/docentes",
+        "/reportes/matriculas",
+    ]
+    for ep in endpoints:
+        r_pdf = client.get(f"{ep}?formato=pdf", headers=ADMIN_HEADERS)
+        assert r_pdf.status_code == 200, ep
+        assert r_pdf.headers["content-type"].startswith("application/pdf")
+        assert r_pdf.content.startswith(b"%PDF-1.")
+        assert len(r_pdf.content) > 1200
+
+        r_json = client.get(f"{ep}?formato=json", headers=ADMIN_HEADERS)
+        assert r_json.status_code == 200, ep
+        body = r_json.json()
+        assert "reportCode" in body and "kpis" in body and "columnas" in body and "filas" in body
+
+
+def test_reportes_rbac_aislamiento_docente_y_bloqueo_estudiante():
+    """
+    Verifica que:
+    - Estudiante no pueda acceder a reportes administrativos/docentes (403).
+    - Docente no pueda ver recaudación de matrículas ni planilla de otros docentes (403).
+    - Docente sí pueda emitir actas de sus cursos y su propio récord.
+    """
+    assert client.get("/reportes/notas", headers=ESTUDIANTE_HEADERS).status_code == 403
+    assert client.get("/reportes/resumen-ejecutivo", headers=DOCENTE_HEADERS).status_code == 403
+    assert client.get("/reportes/matriculas", headers=DOCENTE_HEADERS).status_code == 403
+    assert client.get("/reportes/docentes?docente_id=USR-002", headers=DOCENTE_HEADERS).status_code == 403
+    assert client.get("/reportes/notas?curso_id=CRS-INEXISTENTE-AJENO", headers=DOCENTE_HEADERS).status_code == 403
+
+    r_own = client.get("/reportes/docentes?formato=pdf", headers=DOCENTE_HEADERS)
+    assert r_own.status_code == 200
+    assert r_own.content.startswith(b"%PDF-1.")
+
+
+
+
+
 
 
 

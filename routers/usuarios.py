@@ -7,8 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator
 from database import load_db, save_db, get_pg_connection, fetch_all_as_dict, fetch_one_as_dict
 from auth import (
-    authenticate_with_insforge,
+    authenticate_with_supabase,
+    create_supabase_auth_user,
+    delete_supabase_auth_user,
     get_profile_by_auth_id,
+    invalidate_auth_caches,
+    prime_session_cache,
     require_role,
 )
 
@@ -333,11 +337,36 @@ def validar_datos_usuario(req: ValidationCheckRequest):
 
 # --- ENDPOINT DE LOGIN ---
 
+class AuthAccountCreateRequest(BaseModel):
+    correo: str
+    password: str = Field(..., min_length=6)
+    nombre: Optional[str] = ""
+    rol: str = "estudiante"
+
+
+@router.post("/auth-account", status_code=status.HTTP_201_CREATED)
+def crear_cuenta_auth_supabase(
+    req: AuthAccountCreateRequest,
+    admin: Dict[str, Any] = Depends(require_role(["admin"])),
+):
+    if str(admin.get("estado", "Activo")).strip().lower() != "activo":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta administradora está inactiva.",
+        )
+    return create_supabase_auth_user(
+        email=req.correo.strip().lower(),
+        password=req.password,
+        full_name=(req.nombre or "").strip(),
+        role=normalizar_rol(req.rol),
+    )
+
+
 @router.post("/login", tags=["Autenticación"])
 def login(form_data: UserLogin):
     correo_clean = form_data.correo.strip().lower()
     try:
-        auth_session = authenticate_with_insforge(
+        auth_session = authenticate_with_supabase(
             correo_clean,
             form_data.password,
         )
@@ -348,13 +377,13 @@ def login(form_data: UserLogin):
     auth_user = auth_session.get("user")
     access_token = auth_session.get("accessToken")
     if not isinstance(auth_user, dict) or not access_token or not auth_user.get("id"):
-        print(f"[ERROR - LOGIN] InsForge Auth no devolvió una sesión válida para '{correo_clean}'.")
+        print(f"[ERROR - LOGIN] Supabase Auth no devolvió una sesión válida para '{correo_clean}'.")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="InsForge Auth no devolvió una sesión válida.",
+            detail="Supabase Auth no devolvió una sesión válida.",
         )
 
-    user = get_profile_by_auth_id(str(auth_user["id"]))
+    user = get_profile_by_auth_id(str(auth_user["id"]), correo_clean)
     if user is None:
         print(f"[ERROR - LOGIN] La cuenta '{correo_clean}' (auth_id={auth_user['id']}) no tiene perfil en public.users.")
         raise HTTPException(
@@ -369,6 +398,7 @@ def login(form_data: UserLogin):
             detail="La cuenta se encuentra inactiva",
         )
 
+    prime_session_cache(access_token, str(auth_user["id"]), correo_clean, user)
     full_name = f"{user['nombres']} {user['apellidos']}".strip()
     print(f"[OK - LOGIN] Usuario '{full_name}' ({correo_clean}, Rol: {user['rol']}) inició sesión correctamente.")
     return {
@@ -379,6 +409,7 @@ def login(form_data: UserLogin):
         "userId": user["id"],
         "id": user["id"],
         "email": user.get("correo"),
+        "profile": sanitizar_usuario_por_rol(user, str(user.get("rol", "estudiante"))),
     }
 
 
@@ -618,6 +649,7 @@ def crear_usuario(
 
 @router.put("/{identificador}", dependencies=[Depends(require_role(["admin"]))])
 def actualizar_usuario(identificador: str, user_data: UserUpdate):
+    invalidate_auth_caches()
     update_data = user_data.model_dump(exclude_unset=True)
     if "cicloVirtual" in update_data:
         update_data["ciclovirtual"] = update_data.pop("cicloVirtual")
@@ -707,6 +739,7 @@ def actualizar_usuario(identificador: str, user_data: UserUpdate):
 
 @router.delete("/{identificador}", dependencies=[Depends(require_role(["admin"]))])
 def eliminar_usuario(identificador: str):
+    invalidate_auth_caches()
     conn = get_pg_connection()
     if conn:
         try:
@@ -727,8 +760,9 @@ def eliminar_usuario(identificador: str):
                 # 2. Eliminar de public.users
                 cur.execute("DELETE FROM users WHERE id = %s;", (user_id,))
 
-                # 3. Eliminar de auth.users para permitir recrear el usuario limpiamente
+                # 3. Eliminar de Supabase Auth Admin API y auth.users para permitir recrear el usuario limpiamente
                 if auth_id:
+                    delete_supabase_auth_user(str(auth_id))
                     try:
                         cur.execute("DELETE FROM auth.users WHERE id = %s::uuid;", (auth_id,))
                     except Exception as e_auth:

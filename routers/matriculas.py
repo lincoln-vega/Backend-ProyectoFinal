@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator
 from database import load_db, save_db, get_pg_connection, fetch_all_as_dict, fetch_one_as_dict
 from auth import require_role
 from routers.usuarios import parse_course_list
@@ -14,7 +14,14 @@ class MatriculaCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
     id: str
-    estudianteId: Optional[str] = None
+    estudianteId: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("estudianteId", "estudiante_id"),
+    )
+    cicloId: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("cicloId", "ciclo_id"),
+    )
     estudiante: str
     dni: Optional[str] = None
     correo: Optional[str] = None
@@ -144,23 +151,37 @@ def sincronizar_cursos_estudiante(
 # --- ENDPOINTS MATRÍCULAS ---
 
 @router.get("/", dependencies=[Depends(require_role(["admin", "docente", "estudiante"]))])
-def listar_matriculas():
-    """Lista todas las matrículas registradas."""
+def listar_matriculas(ciclo_id: Optional[str] = None, correo: Optional[str] = None):
+    """Lista las matrículas registradas incluyendo metadatos del ciclo académico (En Curso / Finalizado)."""
     conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, estudiante, dni, correo, celular, programa, ciclo, turno,
-                           "fechaMatricula", "modalidadPago", "montoTotal", "montoPagado",
-                           "saldoPendiente", estado, created_at
-                    FROM matriculas
-                    ORDER BY created_at DESC;
-                    """
-                )
+                query = """
+                    SELECT m.id, m.estudiante_id AS "estudianteId", m.ciclo_id AS "cicloId",
+                           m.estudiante, m.dni, m.correo, m.celular, m.programa, m.ciclo,
+                           m.turno, m."fechaMatricula", m."modalidadPago", m."montoTotal",
+                           m."montoPagado", m."saldoPendiente", m."cursosInscritos", m.estado,
+                           COALESCE(ca.estado, 'En Curso') AS "cicloEstado",
+                           COALESCE(ca.es_vigente, true) AS "cicloVigente",
+                           ca.fecha_inicio::text AS "cicloFechaInicio",
+                           ca.fecha_fin::text AS "cicloFechaFin",
+                           m.created_at
+                    FROM matriculas m
+                    LEFT JOIN ciclos_academicos ca ON ca.id = m.ciclo_id
+                    WHERE 1=1
+                """
+                params = []
+                if ciclo_id:
+                    query += " AND m.ciclo_id = %s"
+                    params.append(ciclo_id)
+                if correo:
+                    query += " AND LOWER(m.correo) = LOWER(%s)"
+                    params.append(correo.strip())
+                query += " ORDER BY m.created_at DESC;"
+                cur.execute(query, tuple(params))
                 rows = fetch_all_as_dict(cur)
-                if rows:
+                if rows is not None and (len(rows) > 0 or ciclo_id or correo):
                     return rows
         except Exception as e:
             print(f"[Matriculas] Fallback listar_matriculas a db.json: {e}")
@@ -168,7 +189,13 @@ def listar_matriculas():
             conn.close()
 
     db = load_db()
-    return db.get("matriculas", [])
+    mats = db.get("matriculas", [])
+    if ciclo_id:
+        mats = [m for m in mats if (m.get("cicloId") or m.get("ciclo_id")) == ciclo_id]
+    if correo:
+        c_low = correo.strip().lower()
+        mats = [m for m in mats if str(m.get("correo") or "").lower() == c_low]
+    return mats
 
 
 @router.post("/", dependencies=[Depends(require_role(["admin"]))], status_code=status.HTTP_201_CREATED)
@@ -192,18 +219,31 @@ def crear_matricula(matricula: MatriculaCreate):
                     print(f"[ERROR - CREAR MATRÍCULA] Ocurrió un error al registrar la matrícula '{matricula.id}' para '{matricula.estudiante}'. Motivo: El ID de matrícula ya existe en PostgreSQL.")
                     raise HTTPException(status_code=400, detail="El ID de matrícula ya existe")
 
+                resolved_ciclo_id = matricula.cicloId
+                if not resolved_ciclo_id and matricula.ciclo:
+                    cur.execute(
+                        "SELECT id FROM ciclos_academicos WHERE LOWER(nombre) = LOWER(%s) OR LOWER(codigo) = LOWER(%s) LIMIT 1;",
+                        (matricula.ciclo.strip(), matricula.ciclo.strip()),
+                    )
+                    c_row = fetch_one_as_dict(cur)
+                    if c_row:
+                        resolved_ciclo_id = c_row["id"]
+
                 cur.execute(
                     """
                     INSERT INTO matriculas (
-                        id, estudiante, dni, correo, celular, programa, ciclo, turno,
-                        "fechaMatricula", "modalidadPago", "montoTotal", "montoPagado",
-                        "saldoPendiente", estado, created_at
+                        id, estudiante_id, ciclo_id, estudiante, dni, correo, celular,
+                        programa, ciclo, turno, "fechaMatricula", "modalidadPago",
+                        "montoTotal", "montoPagado", "saldoPendiente", "cursosInscritos",
+                        estado, created_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, NOW()
                     );
                     """,
                     (
                         matricula.id,
+                        matricula.estudianteId,
+                        resolved_ciclo_id,
                         matricula.estudiante,
                         matricula.dni,
                         matricula.correo,
@@ -216,6 +256,7 @@ def crear_matricula(matricula: MatriculaCreate):
                         matricula.montoTotal,
                         matricula.montoPagado,
                         matricula.saldoPendiente,
+                        json.dumps(matricula.cursosInscritos or []),
                         matricula.estado,
                     ),
                 )
@@ -375,3 +416,100 @@ def registrar_pago(pago: PagoCreate):
     save_db(db)
     print(f"[OK - REGISTRAR PAGO] Pago '{pago.id}' (Comprobante: {pago.comprobante}, Monto: S/ {pago.monto}) del estudiante '{pago.estudiante}' registrado correctamente.")
     return {"mensaje": "Pago registrado y saldo actualizado", "pago": pago}
+
+
+@router.put("/{matricula_id}", dependencies=[Depends(require_role(["admin"]))])
+def actualizar_matricula(matricula_id: str, matricula: MatriculaCreate):
+    conn = get_pg_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE matriculas
+                    SET estudiante = %s, dni = %s, correo = %s, celular = %s,
+                        programa = %s, ciclo = %s, turno = %s, "fechaMatricula" = %s,
+                        "modalidadPago" = %s, "montoTotal" = %s, "montoPagado" = %s,
+                        "saldoPendiente" = %s, estado = %s
+                    WHERE id = %s
+                    RETURNING *;
+                    """,
+                    (
+                        matricula.estudiante,
+                        matricula.dni,
+                        matricula.correo,
+                        matricula.celular,
+                        matricula.programa,
+                        matricula.ciclo,
+                        matricula.turno,
+                        matricula.fechaMatricula,
+                        matricula.modalidadPago,
+                        matricula.montoTotal,
+                        matricula.montoPagado,
+                        matricula.saldoPendiente,
+                        matricula.estado,
+                        matricula_id,
+                    ),
+                )
+                updated = fetch_one_as_dict(cur)
+                if not updated:
+                    raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+                if matricula.cursosInscritos is not None:
+                    sincronizar_cursos_estudiante(
+                        matricula.estudianteId,
+                        matricula.dni,
+                        matricula.correo,
+                        matricula.cursosInscritos,
+                        external_conn=conn,
+                    )
+                conn.commit()
+                return updated
+        except HTTPException:
+            conn.rollback()
+            raise
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"Error al actualizar matrícula: {e}")
+        finally:
+            conn.close()
+
+    db = load_db()
+    mats = db.get("matriculas", [])
+    for idx, m in enumerate(mats):
+        if m.get("id") == matricula_id:
+            mats[idx] = {**m, **matricula.model_dump()}
+            save_db(db)
+            return mats[idx]
+    raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+
+
+@router.delete("/{matricula_id}", dependencies=[Depends(require_role(["admin"]))])
+def eliminar_matricula(matricula_id: str):
+    conn = get_pg_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM pagos WHERE \"matriculaId\" = %s;", (matricula_id,))
+                cur.execute("DELETE FROM matriculas WHERE id = %s RETURNING id;", (matricula_id,))
+                deleted = fetch_one_as_dict(cur)
+                if not deleted:
+                    raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+                conn.commit()
+                return {"mensaje": "Matrícula eliminada correctamente", "id": matricula_id}
+        except HTTPException:
+            conn.rollback()
+            raise
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"Error al eliminar matrícula: {e}")
+        finally:
+            conn.close()
+
+    db = load_db()
+    mats = db.get("matriculas", [])
+    filtradas = [m for m in mats if m.get("id") != matricula_id]
+    if len(filtradas) == len(mats):
+        raise HTTPException(status_code=404, detail="Matrícula no encontrada")
+    db["matriculas"] = filtradas
+    save_db(db)
+    return {"mensaje": "Matrícula eliminada correctamente", "id": matricula_id}
