@@ -15,6 +15,7 @@ from routers import (
     mensajes,
     configuracion,
     storage,
+    reportes,
 )
 
 @asynccontextmanager
@@ -51,6 +52,7 @@ app.include_router(actividades.router_anuncios)
 app.include_router(mensajes.router)
 app.include_router(configuracion.router)
 app.include_router(storage.router)
+app.include_router(reportes.router)
 
 
 @app.get("/")

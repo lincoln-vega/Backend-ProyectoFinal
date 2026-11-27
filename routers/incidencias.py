@@ -33,7 +33,15 @@ class IncidenciaCreate(BaseModel):
     motivo: str
     archivoNombre: Optional[str] = Field(
         default="constancia_o_solicitud.pdf",
-        validation_alias=AliasChoices("archivoNombre", "archivonombre"),
+        validation_alias=AliasChoices("archivoNombre", "archivonombre", "archivo_nombre"),
+    )
+    archivoUrl: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("archivoUrl", "archivo_url"),
+    )
+    archivoPath: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("archivoPath", "archivo_path"),
     )
     fechaPresentacion: Optional[str] = Field(
         default=None,
@@ -100,6 +108,8 @@ def normalizar_incidencia(row: Dict[str, Any]) -> Dict[str, Any]:
     horario_actualizado = row.get("horarioActualizado") or row.get("horarioactualizado")
     fecha_presentacion = row.get("fechaPresentacion") or row.get("fechapresentacion")
     archivo_nombre = row.get("archivoNombre") or row.get("archivonombre")
+    archivo_url = row.get("archivoUrl") or row.get("archivo_url")
+    archivo_path = row.get("archivoPath") or row.get("archivo_path")
     observaciones = row.get("observaciones") or row.get("observacionesResolucion")
 
     return {
@@ -116,6 +126,10 @@ def normalizar_incidencia(row: Dict[str, Any]) -> Dict[str, Any]:
         "horarioactualizado": horario_actualizado,
         "fechaPresentacion": fecha_presentacion,
         "archivoNombre": archivo_nombre,
+        "archivoUrl": archivo_url,
+        "archivo_url": archivo_url,
+        "archivoPath": archivo_path,
+        "archivo_path": archivo_path,
         "observaciones": observaciones,
     }
 
@@ -164,7 +178,7 @@ def _cargar_incidencias() -> List[Dict[str, Any]]:
                     """
                 )
                 rows = fetch_all_as_dict(cur)
-                if rows:
+                if rows is not None:
                     return [normalizar_incidencia(r) for r in rows]
         except Exception as e:
             print(f"[Incidencias] Fallback listar a db.json: {e}")
@@ -229,12 +243,12 @@ def registrar_incidencia(datos: IncidenciaCreate):
                     """
                     INSERT INTO incidents (
                         id, docente, dni, correo, tipo, "fechaPresentacion",
-                        materia, horario, motivo, "archivoNombre", estado,
-                        docenteid, cursoid, docentepropuesto, docentereemplazo,
+                        materia, horario, motivo, "archivoNombre", archivo_url, archivo_path,
+                        estado, docenteid, cursoid, docentepropuesto, docentereemplazo,
                         horarioactualizado, observaciones, created_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pendiente',
-                        %s, %s, %s, %s, %s, %s, NOW()
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        'Pendiente', %s, %s, %s, %s, %s, %s, NOW()
                     )
                     ON CONFLICT (id) DO UPDATE SET
                         docente = EXCLUDED.docente,
@@ -242,6 +256,9 @@ def registrar_incidencia(datos: IncidenciaCreate):
                         materia = EXCLUDED.materia,
                         horario = EXCLUDED.horario,
                         motivo = EXCLUDED.motivo,
+                        "archivoNombre" = COALESCE(EXCLUDED."archivoNombre", incidents."archivoNombre"),
+                        archivo_url = COALESCE(EXCLUDED.archivo_url, incidents.archivo_url),
+                        archivo_path = COALESCE(EXCLUDED.archivo_path, incidents.archivo_path),
                         estado = 'Pendiente'
                     RETURNING *;
                     """,
@@ -256,6 +273,8 @@ def registrar_incidencia(datos: IncidenciaCreate):
                         datos.horario,
                         datos.motivo,
                         datos.archivoNombre,
+                        datos.archivoUrl,
+                        datos.archivoPath,
                         datos.docenteId,
                         datos.cursoId,
                         datos.docentePropuesto,
