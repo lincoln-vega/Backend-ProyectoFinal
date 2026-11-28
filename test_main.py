@@ -1433,6 +1433,86 @@ def test_reportes_rbac_aislamiento_docente_y_bloqueo_estudiante():
     assert r_own.content.startswith(b"%PDF-1.")
 
 
+def test_registrar_pagos_y_matriculas_auto_resuelve_colisiones_de_id_y_actualiza_saldo():
+    """
+    Verifica que si el cliente envía un ID de pago o matrícula ya existente (ej. PAG-001 o MAT-2026-001)
+    o vacío, el backend asigne automáticamente el siguiente correlativo libre sin error de llave duplicada.
+    """
+    r_mat = client.post(
+        "/matriculas/",
+        headers=ADMIN_HEADERS,
+        json={
+            "id": "MAT-2026-001",
+            "estudiante": "Postulante Prueba Correlativo",
+            "dni": "79887766",
+            "correo": "correlativo@academia.edu.pe",
+            "celular": "988776655",
+            "programa": "Semestral San Marcos - Ciencias Médicas",
+            "ciclo": "Semestral San Marcos 2026-II",
+            "turno": "Mañana (08:00 - 13:00)",
+            "fechaMatricula": "2026-11-27",
+            "modalidadPago": "Cuotas (3 cuotas)",
+            "montoTotal": 1200,
+            "montoPagado": 0,
+            "saldoPendiente": 1200,
+            "estado": "Pendiente",
+        },
+    )
+    assert r_mat.status_code == 201, r_mat.text
+    created_mat = r_mat.json()["matricula"]
+    mat_id = created_mat["id"]
+    assert mat_id.startswith("MAT-2026-")
+
+    # Primer pago enviando un ID y comprobante que luego intentaremos repetir
+    r_pago_1 = client.post(
+        "/matriculas/pagos",
+        headers=ADMIN_HEADERS,
+        json={
+            "id": "PAG-001",
+            "matriculaId": mat_id,
+            "estudiante": "Postulante Prueba Correlativo",
+            "concepto": "Cuota 1",
+            "monto": 400,
+            "metodo": "Yape / Plin",
+            "operacion": "OP-TEST-001",
+            "comprobante": "B001-00382",
+            "fecha": "2026-11-27",
+            "estado": "Aprobado",
+        },
+    )
+    assert r_pago_1.status_code == 201, r_pago_1.text
+    pago_1 = r_pago_1.json()["pago"]
+
+    # Segundo pago repitiendo deliberadamente el MISMO id que acaba de usarse -> debe auto-incrementar sin fallar
+    r_pago_2 = client.post(
+        "/matriculas/pagos",
+        headers=ADMIN_HEADERS,
+        json={
+            "id": pago_1["id"],
+            "matriculaId": mat_id,
+            "estudiante": "Postulante Prueba Correlativo",
+            "concepto": "Cuota 2",
+            "monto": 400,
+            "metodo": "Yape / Plin",
+            "operacion": "OP-TEST-002",
+            "comprobante": pago_1["comprobante"],
+            "fecha": "2026-11-27",
+            "estado": "Aprobado",
+        },
+    )
+    assert r_pago_2.status_code == 201, r_pago_2.text
+    pago_2 = r_pago_2.json()["pago"]
+    assert pago_2["id"] != pago_1["id"]
+    assert pago_2["comprobante"] != pago_1["comprobante"]
+
+    # Verificar que el saldo de la matrícula quedó exactamente en 1200 - 800 = 400
+    r_list = client.get("/matriculas/", headers=ADMIN_HEADERS)
+    mat_updated = next(m for m in r_list.json() if m["id"] == mat_id)
+    assert float(mat_updated["montoPagado"]) == 800.0
+    assert float(mat_updated["saldoPendiente"]) == 400.0
+
+
+
 
 
 
