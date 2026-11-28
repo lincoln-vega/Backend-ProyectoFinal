@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -223,7 +224,34 @@ def registrar_incidencia(datos: IncidenciaCreate):
     db = load_db()
     incidencias = db.setdefault("incidents", [])
 
-    nuevo_id = datos.id or f"INC-D{str(len(incidencias) + 1).zfill(2)}"
+    existing_ids = {str(inc.get("id")).strip() for inc in incidencias if inc.get("id")}
+    conn = get_pg_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM incidents;")
+                for r in fetch_all_as_dict(cur) or []:
+                    if r.get("id"):
+                        existing_ids.add(str(r["id"]).strip())
+        except Exception:
+            pass
+
+    requested_id = (datos.id or "").strip()
+    is_sequential_inc_id = bool(re.match(r"^INC-D?\d+$", requested_id, re.IGNORECASE))
+    if not requested_id or (is_sequential_inc_id and requested_id in existing_ids):
+        max_num = 0
+        for eid in existing_ids:
+            if re.match(r"^INC-D?\d+$", eid, re.IGNORECASE):
+                digits = "".join(ch for ch in eid if ch.isdigit())
+                if digits:
+                    max_num = max(max_num, int(digits))
+        cand_num = max_num + 1
+        while f"INC-{str(cand_num).zfill(3)}" in existing_ids or f"INC-D{str(cand_num).zfill(2)}" in existing_ids:
+            cand_num += 1
+        nuevo_id = f"INC-{str(cand_num).zfill(3)}"
+    else:
+        nuevo_id = requested_id
+
     fecha_pres = datos.fechaPresentacion or datetime.now().strftime("%Y-%m-%d %H:%M")
 
     nueva_incidencia = normalizar_incidencia(
@@ -235,7 +263,6 @@ def registrar_incidencia(datos: IncidenciaCreate):
         }
     )
 
-    conn = get_pg_connection()
     if conn:
         try:
             with conn.cursor() as cur:
